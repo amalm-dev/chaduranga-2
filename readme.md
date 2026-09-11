@@ -154,7 +154,7 @@ Built with a single heart for the **Hackathon** by:
 
 | Name | Role |
 |---|---|
-| **Amal M** ([@amalm-dev](https://github.com/amalm-dev)) | Lead Developer — game engine, online play, UI/UX |
+| **Amal M** ([@amalm-dev](https://github.com/amalm-dev)) | Developer |
 | **Binesh** | Developer |
 | **Vismaya** | Developer |
 | **Niyas** | Developer |
