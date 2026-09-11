@@ -100,7 +100,7 @@ Checkmate the enemy King, or force a stalemate for a draw.
 
 1. Push to a GitHub repo
 2. Go to **Settings → Pages → Source: main branch → / (root)**
-3. Your site will be live at `https://<username>.github.io/<repo>/`
+3. Your site will be live at `https://amalm-dev.github.io/chaduranga-2/`
 
 ### Netlify / Vercel
 
@@ -150,7 +150,7 @@ For commercial licensing, collaboration, or any use not explicitly permitted abo
 
 ## Team
 
-Built with a single heart for the **Hackathon** by:
+Built with a ❤️ for the **Hackathon** by:
 
 | Name | Role |
 |---|---|
@@ -160,7 +160,7 @@ Built with a single heart for the **Hackathon** by:
 | **Niyas** | Developer |
 | **Anandu** | Developer |
 
-❤️
+
 
 ---
 
