@@ -35,8 +35,11 @@ class ChessGame {
         this.currentMoveEntry = null;
         this.redoStack = [];
 
+        // ★ FLIP: whether the board is rendered from Black's perspective
+        this.boardFlipped = false;
+
         // Environment position mode
-        this.envMode = localStorage.getItem(LS_ENV_MODE_KEY) || 'random'; // 'random' | 'permanent'
+        this.envMode = localStorage.getItem(LS_ENV_MODE_KEY) || 'random';
 
         // Timer
         this.timerSeconds = 0;
@@ -67,19 +70,17 @@ class ChessGame {
             color: color,
             hasMoved: false,
             forestBuff: false,
-            waterCrippled: false,       // ★ PERMANENT flag (was waterDebuff: 0)
+            waterCrippled: false,
             isProtected: false,
             designatedForest: null,
             id: `${color}-${type}-${this.pieceIdCounter++}`
         };
     }
 
-    // ★ Support random vs. permanent (fixed) terrain
     initTerrain() {
         this.terrain = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
 
         if (this.envMode === 'permanent') {
-            // Fixed symmetric layout for tournament play
             const PERMANENT = [
                 { r: 3, c: 4, type: 'forest' }, { r: 8, c: 7, type: 'forest' },
                 { r: 4, c: 7, type: 'forest' }, { r: 7, c: 4, type: 'forest' },
@@ -91,7 +92,6 @@ class ChessGame {
             return;
         }
 
-        // Random symmetric layout (default)
         const usedPositions = new Set();
         const placePair = (type) => {
             let r, c, attempts = 0;
@@ -206,14 +206,24 @@ class ChessGame {
         el.textContent = `${m}:${s}`;
     }
 
-    // ═══ RENDERING ═══
+    // ═══════════════════════════════════════════════════════
+    // RENDERING (with board flip support)
+    // ═══════════════════════════════════════════════════════
     renderBoard() {
         const boardEl = document.getElementById('board');
         if (!boardEl) return;
         boardEl.innerHTML = '';
 
-        for (let r = BOARD_SIZE - 1; r >= 0; r--) {
-            for (let c = 0; c < BOARD_SIZE; c++) {
+        const flipped = this.boardFlipped;
+
+        // ★ FLIP: iterate in a direction that depends on perspective.
+        // White's view: r=11 (rank 1) at bottom, r=0 (rank 12) at top.
+        // Black's view: r=0 (rank 12) at bottom, r=11 (rank 1) at top.
+        for (let i = 0; i < BOARD_SIZE; i++) {
+            for (let j = 0; j < BOARD_SIZE; j++) {
+                const r = flipped ? i : (BOARD_SIZE - 1 - i);
+                const c = flipped ? (BOARD_SIZE - 1 - j) : j;
+
                 const square = document.createElement('div');
                 square.className = 'square';
                 square.classList.add((r + c) % 2 === 0 ? 'dark' : 'light');
@@ -240,14 +250,13 @@ class ChessGame {
                     pieceEl.className = `piece ${piece.color}`;
                     pieceEl.dataset.type = piece.type;
 
-                    // ★ Try custom image first — fall back to emoji if missing
+                    // ★ Custom image first, emoji fallback
                     const img = document.createElement('img');
                     img.src = `assets/models/pieces/${piece.color}-${piece.type}.png`;
                     img.alt = PIECE_SYMBOLS[piece.color][piece.type];
                     img.className = 'piece-img';
                     img.draggable = false;
                     img.onerror = () => {
-                        // Custom image missing — show emoji/text instead
                         img.remove();
                         pieceEl.textContent = PIECE_SYMBOLS[piece.color][piece.type];
                     };
@@ -273,12 +282,32 @@ class ChessGame {
         const bottomCols = document.getElementById('bottom-col-labels');
         const leftRows = document.getElementById('left-row-labels');
         const rightRows = document.getElementById('right-row-labels');
+        if (!topCols || !bottomCols || !leftRows || !rightRows) return;
 
-        if (topCols && topCols.children.length === 0) {
-            COLUMNS.forEach(c => {
-                const s1 = document.createElement('span'); s1.textContent = c; topCols.appendChild(s1);
-                const s2 = document.createElement('span'); s2.textContent = c; bottomCols.appendChild(s2);
-            });
+        // ★ FLIP: always rebuild labels so flipping updates them
+        topCols.innerHTML = '';
+        bottomCols.innerHTML = '';
+        leftRows.innerHTML = '';
+        rightRows.innerHTML = '';
+
+        const flipped = this.boardFlipped;
+
+        // Column labels (files)
+        const cols = flipped ? [...COLUMNS].reverse() : COLUMNS;
+        cols.forEach(c => {
+            const s1 = document.createElement('span'); s1.textContent = c; topCols.appendChild(s1);
+            const s2 = document.createElement('span'); s2.textContent = c; bottomCols.appendChild(s2);
+        });
+
+        // Row labels (ranks)
+        if (flipped) {
+            // Black's view: rank 1 at top → rank 12 at bottom
+            for (let r = 1; r <= BOARD_SIZE; r++) {
+                const s1 = document.createElement('span'); s1.textContent = r; leftRows.appendChild(s1);
+                const s2 = document.createElement('span'); s2.textContent = r; rightRows.appendChild(s2);
+            }
+        } else {
+            // White's view: rank 12 at top → rank 1 at bottom
             for (let r = BOARD_SIZE; r >= 1; r--) {
                 const s1 = document.createElement('span'); s1.textContent = r; leftRows.appendChild(s1);
                 const s2 = document.createElement('span'); s2.textContent = r; rightRows.appendChild(s2);
@@ -342,7 +371,7 @@ class ChessGame {
                     el.textContent = `${p.color} Tiger: Forest Buff (+2 range)`;
                     effectsEl.appendChild(el);
                 }
-                if (p.type === 'rooster' && p.waterCrippled) {          // ★ permanent
+                if (p.type === 'rooster' && p.waterCrippled) {
                     any = true;
                     const el = document.createElement('div');
                     el.className = 'status-effect-item';
@@ -587,7 +616,7 @@ class ChessGame {
     getRoosterMoves(r, c, piece) {
         const moves = [];
         const dir = piece.color === 'white' ? 1 : -1;
-        const dist = piece.waterCrippled ? 1 : 2;      // ★ permanent cripple
+        const dist = piece.waterCrippled ? 1 : 2;
 
         for (const dcDir of [-1, 1]) {
             const nr = r + dir * dist;
@@ -816,7 +845,7 @@ class ChessGame {
                 }
             }
             if (landedPiece.type === 'rooster' && this.terrain[move.toRow][move.toCol] === 'water') {
-                landedPiece.waterCrippled = true;      // ★ PERMANENT
+                landedPiece.waterCrippled = true;
             }
             if (this.terrain[move.toRow][move.toCol] === 'temple') {
                 landedPiece.isProtected = true;
@@ -827,7 +856,6 @@ class ChessGame {
 
         this.lastMove = { fromR, fromC, toR: move.toRow, toC: move.toCol };
 
-        // ★ Start timer on first move
         if (this.moveLog.length === 0 && !this.timerRunning && this.moveNumber === 1) {
             this.startTimer();
         }
@@ -878,8 +906,6 @@ class ChessGame {
     switchTurn() {
         this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
         if (this.currentPlayer === 'white') this.moveNumber++;
-
-        // ★ REMOVED the waterDebuff decrement loop — cripple is now permanent
 
         this.renderBoard();
         this.updateUI();
@@ -976,7 +1002,8 @@ class ChessGame {
         document.getElementById('game-status').textContent = 'Move redone.';
     }
 
-    newGame() {
+    // ★ FLIP: newGame now accepts a flip flag
+    newGame(flipBoard = false) {
         this.history = [];
         this.currentPlayer = 'white';
         this.moveNumber = 1;
@@ -987,6 +1014,7 @@ class ChessGame {
         this.moveLog = [];
         this.currentMoveEntry = null;
         this.redoStack = [];
+        this.boardFlipped = flipBoard;    // ★ FLIP
         this.initTerrain();
         this.initBoard();
         this.assignForests();
@@ -1022,7 +1050,7 @@ class ChessGame {
         modal.classList.add('active');
         document.getElementById('gameover-new-game').onclick = () => {
             modal.classList.remove('active');
-            this.newGame();
+            this.newGame(this.boardFlipped);  // preserve flip on rematch
         };
     }
 }
@@ -1135,7 +1163,8 @@ class OnlineManager {
                 document.getElementById('connection-status').textContent = 'Opponent connected!';
                 setTimeout(() => {
                     document.getElementById('online-modal').classList.remove('active');
-                    this.game.newGame();
+                    // ★ FLIP: pass flip flag based on my color
+                    this.game.newGame(this.myColor === 'black');
                     this.isOnline = true;
                     this.game.updateUI();
                     this.setChatVisible(true);
@@ -1173,7 +1202,8 @@ class OnlineManager {
                 document.getElementById('connection-status').textContent = 'Connected! You play Black.';
                 setTimeout(() => {
                     document.getElementById('online-modal').classList.remove('active');
-                    this.game.newGame();
+                    // ★ FLIP: pass flip flag based on my color
+                    this.game.newGame(this.myColor === 'black');
                     this.isOnline = true;
                     this.game.updateUI();
                     this.setChatVisible(true);
@@ -1275,7 +1305,6 @@ const online = new OnlineManager(game);
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // ─── Settings menu toggle ───
     const settingsBtn = document.getElementById('settings-menu-btn');
     const settingsMenu = document.getElementById('settings-menu');
     if (settingsBtn && settingsMenu) {
@@ -1305,7 +1334,8 @@ document.addEventListener('DOMContentLoaded', () => {
         online.isOnline = false;
         online.clearSession();
         online.setChatVisible(false);
-        game.newGame();
+        // ★ FLIP: local game starts non-flipped
+        game.newGame(false);
     });
 
     document.getElementById('undo-btn')?.addEventListener('click', () => game.undo());
@@ -1336,7 +1366,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { if (renderer3d) renderer3d.onResize(); }, 100);
     });
 
-    // ─── Reset view ───
     document.getElementById('reset-view-btn')?.addEventListener('click', () => {
         if (renderer3d && typeof renderer3d.camera !== 'undefined') {
             renderer3d.camera.position.set(6, 12, 16);
@@ -1346,7 +1375,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector('.board-wrapper')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
 
-    // ─── Panel toggles (fullscreen) ───
     document.getElementById('toggle-left-panel')?.addEventListener('click', (e) => {
         e.stopPropagation();
         document.getElementById('panel-left')?.classList.toggle('panel-open');
@@ -1369,7 +1397,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ─── Online modal buttons ───
     document.getElementById('create-room-btn')?.addEventListener('click', () => online.createRoom());
     document.getElementById('join-room-btn')?.addEventListener('click', () => {
         const code = document.getElementById('join-code-input').value.trim().toUpperCase();
@@ -1420,7 +1447,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ─── Day / Night ───
     const envModes = ['day', 'sunset', 'night'];
     const envIcons = ['☀️ Day', '🌅 Sunset', '🌙 Night'];
     let envIndex = -1;
@@ -1432,7 +1458,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (renderer3d) renderer3d.setEnvironment(envModes[envIndex]);
     });
 
-    // ─── Biome ───
     const biomes = ['desert', 'snow', 'ocean', 'volcano', 'forest'];
     const biomeIcons = ['🏜️ Desert', '❄️ Snow', '🌊 Ocean', '🌋 Volcano', '🌲 Forest'];
     let biomeIndex = 0;
@@ -1442,7 +1467,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (renderer3d && typeof renderer3d.setBiome === 'function') renderer3d.setBiome(biomes[biomeIndex]);
     });
 
-    // ─── Board theme ───
     const boardThemes = ['classic', 'walnut', 'marble', 'metallic', 'emerald', 'midnight', 'cherry'];
     const boardThemeIcons = ['🪵 Classic', '🌰 Walnut', '🪨 Marble', '⚙️ Metallic', '💎 Emerald', '🌙 Midnight', '🍒 Cherry'];
     let boardThemeIndex = 0;
@@ -1461,7 +1485,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ─── Env position mode (Random / Permanent) ───
     document.getElementById('env-position-btn')?.addEventListener('click', () => {
         const btn = document.getElementById('env-position-btn');
         const nextMode = game.envMode === 'random' ? 'permanent' : 'random';
@@ -1473,7 +1496,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btn) btn.textContent = game.envMode === 'random' ? '🎲 Env: Random' : '📌 Env: Permanent';
     }
 
-    // ─── Chat ───
     function addChatMessage(text, sender, isEmoji) {
         const container = document.getElementById('chat-messages');
         if (!container) return;
@@ -1514,7 +1536,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') sendChat();
     });
 
-    // ─── 3D sync hooks ───
     const origRenderBoard = game.renderBoard.bind(game);
     game.renderBoard = function() {
         origRenderBoard();
@@ -1538,7 +1559,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (is3D && renderer3d) renderer3d.clearIndicators();
     };
 
-    // ─── Auto-join via URL ?join=CODE ───
     const urlParams = new URLSearchParams(window.location.search);
     const joinCode = urlParams.get('join');
     if (joinCode && joinCode.length === 4) {
@@ -1549,7 +1569,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 400);
     }
 
-    // ─── Resume banner (auto-reconnect) ───
     const session = OnlineManager.loadSession();
     const resumeBanner = document.getElementById('resume-banner');
     if (session && resumeBanner) {
@@ -1570,12 +1589,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ─── Reconnect cancel ───
     document.getElementById('reconnect-cancel-btn')?.addEventListener('click', () => {
         document.getElementById('reconnect-overlay')?.classList.add('hidden');
     });
 
-    // ─── Initial state ───
     online.setChatVisible(false);
-    game.newGame();
+    game.newGame(false);    // ★ FLIP: start non-flipped
 });
