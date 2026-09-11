@@ -2352,3 +2352,99 @@ body.env-night .header { background: rgba(13, 15, 24, 0.95); }
         );
     }
 }
+
+/* ═══════════════════════════════════════════════════════
+   MOBILE HARD-FIX OVERRIDES (added for responsiveness)
+   ═══════════════════════════════════════════════════════ */
+
+/* Global safety net — nothing can ever exceed its container */
+img { max-width: 100%; height: auto; }
+
+/* Shrink the nav logo everywhere */
+.nav-rail-logo-img {
+    width: 40px !important;
+    height: 40px !important;
+    max-width: 40px !important;
+    max-height: 40px !important;
+    object-fit: contain;
+}
+
+/* Tablet / mobile — extra compact */
+@media (max-width: 1000px) {
+    .nav-rail-logo-img {
+        width: 36px !important;
+        height: 36px !important;
+        max-width: 36px !important;
+        max-height: 36px !important;
+    }
+}
+
+/* Phone — small nav rail with tiny logo */
+@media (max-width: 700px) {
+    .nav-rail {
+        width: 52px !important;
+        padding: 8px 4px !important;
+    }
+    .nav-rail-logo {
+        padding: 4px 0 8px !important;
+    }
+    .nav-rail-logo-img {
+        width: 30px !important;
+        height: 30px !important;
+        max-width: 30px !important;
+        max-height: 30px !important;
+    }
+
+    /* Header stacking on phone */
+    .header {
+        padding: 10px 12px !important;
+        gap: 8px !important;
+    }
+    .header-left,
+    .header-right {
+        gap: 4px !important;
+    }
+    .header-left .btn,
+    .header-right .btn {
+        padding: 6px 10px !important;
+        font-size: 11px !important;
+    }
+
+    /* Main padding tighter */
+    .main {
+        padding: 12px 8px !important;
+        gap: 14px !important;
+    }
+
+    /* Board gets full width */
+    .board-wrapper {
+        padding: 8px !important;
+        width: 100%;
+    }
+    .board {
+        max-width: 100%;
+    }
+}
+
+/* Very small phones */
+@media (max-width: 420px) {
+    .nav-rail {
+        width: 48px !important;
+        padding: 6px 2px !important;
+    }
+    .nav-rail-icon { font-size: 18px !important; }
+    .nav-rail-label { font-size: 8px !important; }
+    .nav-rail-logo-img {
+        width: 26px !important;
+        height: 26px !important;
+        max-width: 26px !important;
+        max-height: 26px !important;
+    }
+
+    .header-title { font-size: 14px !important; }
+    .header-left .btn,
+    .header-right .btn {
+        padding: 5px 8px !important;
+        font-size: 10px !important;
+    }
+}
