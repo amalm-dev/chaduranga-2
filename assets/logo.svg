@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f4c84a"/>
+      <stop offset="100%" stop-color="#b8860b"/>
+    </linearGradient>
+  </defs>
+  <!-- Circle background -->
+  <circle cx="32" cy="32" r="30" fill="#1c1b19" stroke="url(#gold)" stroke-width="2"/>
+  <!-- Knight chess piece silhouette -->
+  <path d="M22 50 h20 v3 h-20 z" fill="url(#gold)"/>
+  <path d="M20 46 q2-4 5-6 l2-3 q-3-1-3-4 q0-3 3-5 l-1-3 q2 1 4 2 l2-4 q1-3 5-3 q3 0 5 2 q2 2 2 5 l-1 4 q4 2 5 6 q1 4 0 9 z" fill="url(#gold)"/>
+  <!-- Eye -->
+  <circle cx="34" cy="24" r="1.5" fill="#1c1b19"/>
+  <!-- Mane -->
+  <path d="M30 20 q-3 0-4 2 q2 1 4 1 z" fill="#b8860b"/>
+</svg>

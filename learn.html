@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learn — Chaduranga 2.0</title>
+    <meta name="description" content="Learn Chaduranga 2.0 — piece-by-piece interactive tutorials for the 12×12 chess variant">
+    <meta name="theme-color" content="#1c1b19">
+    <link rel="icon" type="image/png" href="assets/logo.png">
+    <link rel="apple-touch-icon" href="assets/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+    <div class="app">
+
+        <!-- ═══════════════ LEFT NAV RAIL ═══════════════ -->
+        <nav class="nav-rail" aria-label="Main navigation">
+            <a href="index.html" class="nav-rail-logo" aria-label="Chaduranga home">
+                <img src="assets/logo.png" alt="Chaduranga" class="nav-rail-logo-img">
+            </a>
+
+            <a href="index.html" class="nav-rail-item" title="Play">
+                <span class="nav-rail-icon">♟</span>
+                <span class="nav-rail-label">Play</span>
+            </a>
+
+            <a href="learn.html" class="nav-rail-item active" title="Learn">
+                <span class="nav-rail-icon">📖</span>
+                <span class="nav-rail-label">Learn</span>
+            </a>
+
+            <button class="nav-rail-item" id="nav-puzzles-btn" title="Puzzles (coming soon)">
+                <span class="nav-rail-icon">🧩</span>
+                <span class="nav-rail-label">Puzzles</span>
+            </button>
+
+            <button class="nav-rail-item" id="nav-train-btn" title="Train (coming soon)">
+                <span class="nav-rail-icon">🎯</span>
+                <span class="nav-rail-label">Train</span>
+            </button>
+
+            <div class="nav-rail-spacer"></div>
+
+            <button class="nav-rail-item" id="nav-settings-btn" title="Settings">
+                <span class="nav-rail-icon">⚙️</span>
+                <span class="nav-rail-label">Settings</span>
+            </button>
+        </nav>
+
+        <!-- ═══════════════ MAIN APP CONTENT ═══════════════ -->
+        <div class="app-content">
+
+            <!-- ─── HEADER ─── -->
+            <header class="header">
+                <div class="header-left">
+                    <a href="index.html" class="btn btn-ghost" aria-label="Back to play">← Back to Play</a>
+                </div>
+
+                <div class="header-center">
+                    <h1 class="header-title">Learn <span class="header-title-version">Chaduranga</span></h1>
+                </div>
+
+                <div class="header-right">
+                    <div class="user-area" id="user-area">
+                        <button id="login-btn" class="btn btn-ghost"
+                                onclick="AUTH && AUTH.showLoginOverlay && AUTH.showLoginOverlay()"
+                                aria-label="Login">🔑 Login</button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- ─── MAIN ─── -->
+            <main class="main learn-main">
+
+                <!-- ═══════════════════════════════════════════════════
+                     VIEW 1 — LEARN LANDING (lesson grid)
+                     ═══════════════════════════════════════════════════ -->
+                <div id="learn-view" class="learn-page">
+                    <div class="learn-hero">
+                        <h1>Learn Chaduranga</h1>
+                        <p>Master every piece, terrain, and tactic with interactive lessons. Each lesson puts you on the board and hands you the piece to practice with.</p>
+                        <div class="learn-hero-actions">
+                            <a href="#king" class="btn btn-primary" data-lesson="king">Start with the King</a>
+                            <a href="#tiger" class="btn btn-accent" data-lesson="tiger">⭐ Tiger &amp; Rooster</a>
+                        </div>
+                    </div>
+
+                    <!-- ─── Standard Pieces ─── -->
+                    <h3 class="learn-section-title">Standard Pieces</h3>
+                    <div class="learn-grid">
+                        <a href="#king" class="learn-card" data-lesson="king">
+                            <span class="learn-card-icon">♔</span>
+                            <div class="learn-card-body">
+                                <span class="learn-card-tag standard">Standard</span>
+                                <h3>King</h3>
+                                <p>Move 1 square, protect from check, and castle to safety.</p>
+                            </div>
+                        </a>
+                        <a href="#queen" class="learn-card" data-lesson="queen">
+                            <span class="learn-card-icon">♕</span>
+                            <div class="learn-card-body">
+                                <span class="learn-card-tag standard">Standard</span>
+                                <h3>Queen</h3>
+                                <p>The most powerful piece — moves in every direction, unlimited range.</p>
+                            </div>
+                        </a>
+                        <a href="#rook" class="learn-card" data-lesson="rook">
+                            <span class="learn-card-icon">♖</span>
+                            <div class="learn-card-body">
+                                <span class="learn-card-tag standard">Standard</span>
+                                <h3>Rook</h3>
+                                <p>Straight lines only. Pairs with the King for castling.</p>
+                            </div>
+                        </a>
+                        <a href="#bishop" class="learn-card" data-lesson="bishop">
+                            <span class="learn-card-icon">♗</span>
+                            <div class="learn-card-body">
+                                <span class="learn-card-tag standard">Standard</span>
+                                <h3>Bishop</h3>
+                                <p>Diagonals for life. One bishop lives on light, one on dark.</p>
+                            </div>
+                        </a>
+                        <a href="#knight" class="learn-card" data-lesson="knight">
+                            <span class="learn-card-icon">♘</span>
+                            <div class="learn-card-body">
+                                <span class="learn-card-tag standard">Standard</span>
+                                <h3>Knight</h3>
+                                <p>The only piece that jumps. 2+1 L-shape jumps over anything.</p>
+                            </div>
+                        </a>
+                        <a href="#pawn" class="learn-card" data-lesson="pawn">
+                            <span class="learn-card-icon">♙</span>
+                            <div class="learn-card-body">
+                                <span class="learn-card-tag standard">Standard</span>
+                                <h3>Pawn</h3>
+                                <p>Move forward, capture diagonally, promote on the last rank.</p>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- ─── Special Pieces ─── -->
+                    <h3 class="learn-section-title">Special Pieces</h3>
+                    <div class="learn-grid">
+                        <a href="#tiger" class="learn-card" data-lesson="tiger">
+                            <span class="learn-card-icon">🐅</span>
+                            <div class="learn-card-body">
+                                <span class="learn-card-tag special">Special</span>
+                                <h3>Tiger — The Hunter</h3>
+                                <p>Travels to its designated forest, hunts once, leaves the board. Cannot be captured.</p>
+                            </div>
+                        </a>
+                        <a href="#rooster" class="learn-card" data-lesson="rooster">
+                            <span class="learn-card-icon">🐓</span>
+                            <div class="learn-card-body">
+                                <span class="learn-card-tag special">Special</span>
+                                <h3>Rooster — The Sentinel</h3>
+                                <p>Jumps 2 diagonal, then captures straight ahead. Water permanently cripples it.</p>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- ─── Terrain ─── -->
+                    <h3 class="learn-section-title">Terrain Effects</h3>
+                    <div class="learn-grid">
+                        <a href="#forest" class="learn-card" data-lesson="forest">
+                            <span class="learn-card-icon">🌲</span>
+                            <div class="learn-card-body">
+                                <span class="learn-card-tag terrain">Terrain</span>
+                                <h3>Forest Squares</h3>
+                                <p>Each Tiger owns one. Only the designated forest buffs its hunter.</p>
+                            </div>
+                        </a>
+                        <a href="#water" class="learn-card" data-lesson="water">
+                            <span class="learn-card-icon">🌊</span>
+                            <div class="learn-card-body">
+                                <span class="learn-card-tag terrain">Terrain</span>
+                                <h3>Water Squares</h3>
+                                <p>Permanently cripples Roosters — flight drops to one square forever.</p>
+                            </div>
+                        </a>
+                        <a href="#temple" class="learn-card" data-lesson="temple">
+                            <span class="learn-card-icon">🛕</span>
+                            <div class="learn-card-body">
+                                <span class="learn-card-tag terrain">Terrain</span>
+                                <h3>Temple (Safe Zone)</h3>
+                                <p>Grants temporary protection. Lost when the piece moves away.</p>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- ─── Teamwork & Tactics ─── -->
+                    <h3 class="learn-section-title">Teamwork &amp; Tactics</h3>
+                    <div class="learn-grid">
+                        <a href="#castling" class="learn-card" data-lesson="castling">
+                            <span class="learn-card-icon">🏰</span>
+                            <div class="learn-card-body">
+                                <span class="learn-card-tag advanced">Advanced</span>
+                                <h3>Castling</h3>
+                                <p>Move the King two squares to safety while activating your Rook.</p>
+                            </div>
+                        </a>
+                        <a href="#enpassant" class="learn-card" data-lesson="enpassant">
+                            <span class="learn-card-icon">⚔️</span>
+                            <div class="learn-card-body">
+                                <span class="learn-card-tag advanced">Advanced</span>
+                                <h3>En Passant</h3>
+                                <p>Capture a pawn that tries to sneak past on the first move.</p>
+                            </div>
+                        </a>
+                        <a href="#coordination" class="learn-card" data-lesson="coordination">
+                            <span class="learn-card-icon">🤝</span>
+                            <div class="learn-card-body">
+                                <span class="learn-card-tag advanced">Advanced</span>
+                                <h3>Piece Coordination</h3>
+                                <p>How to protect each other, create threats, and combine forces.</p>
+                            </div>
+                        </a>
+                        <a href="#checkmate" class="learn-card" data-lesson="checkmate">
+                            <span class="learn-card-icon">👑</span>
+                            <div class="learn-card-body">
+                                <span class="learn-card-tag advanced">Advanced</span>
+                                <h3>Checkmate Patterns</h3>
+                                <p>Learn the classic mate patterns so you can spot them in games.</p>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- ─── Puzzles ─── -->
+                    <h3 class="learn-section-title">Puzzles</h3>
+                    <div class="learn-grid">
+                        <a href="#puzzle1" class="learn-card" data-lesson="puzzle1">
+                            <span class="learn-card-icon">🧩</span>
+                            <div class="learn-card-body">
+                                <span class="learn-card-tag special">Puzzle</span>
+                                <h3>Beginner Puzzle #1</h3>
+                                <p>Spot the winning move in this simple tactical position.</p>
+                            </div>
+                        </a>
+                        <a href="#puzzle2" class="learn-card" data-lesson="puzzle2">
+                            <span class="learn-card-icon">🧩</span>
+                            <div class="learn-card-body">
+                                <span class="learn-card-tag special">Puzzle</span>
+                                <h3>Beginner Puzzle #2</h3>
+                                <p>Use the Tiger's one-shot hunt to swing the game.</p>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ═══════════════════════════════════════════════════
+                     VIEW 2 — LESSON VIEW (loaded per lesson)
+                     ═══════════════════════════════════════════════════ -->
+                <div id="lesson-view" class="lesson-view" style="display:none;">
+                    <!-- Top progress bar -->
+                    <div class="lesson-progress">
+                        <span class="pct" id="lesson-pct">0%</span>
+                        <div class="bar"><div class="bar-fill" id="lesson-bar-fill"></div></div>
+                    </div>
+
+                    <!-- Lesson header -->
+                    <div class="lesson-header">
+                        <span class="lesson-icon" id="lesson-icon">♔</span>
+                        <div>
+                            <h1 id="lesson-title">King</h1>
+                            <p class="lesson-subtitle" id="lesson-subtitle">Move 1 square, protect from check.</p>
+                        </div>
+                    </div>
+
+                    <!-- Lesson body: board + coach card -->
+                    <div class="lesson-body">
+                        <!-- Board area (12×12) -->
+                        <div class="lesson-board-area">
+                            <div id="lesson-board" class="lesson-board"></div>
+                        </div>
+
+                        <!-- Coach card (sticky on desktop, stacks below on mobile) -->
+                        <aside class="coach-card" id="coach-card">
+                            <div class="coach-step" id="coach-step">STEP 1 OF 3</div>
+                            <h3 class="coach-title" id="coach-title">Move the King one square</h3>
+                            <p class="coach-text" id="coach-text">
+                                The King can move exactly one square — horizontally, vertically, or diagonally.
+                            </p>
+
+                            <div class="coach-status waiting" id="coach-status">
+                                Tap the highlighted square to move.
+                            </div>
+
+                            <div class="coach-actions">
+                                <button id="coach-skip" class="btn btn-ghost btn-sm">Skip</button>
+                                <button id="coach-next" class="btn btn-primary btn-sm" disabled>Next</button>
+                            </div>
+
+                            <div class="coach-dots" id="coach-dots"></div>
+                        </aside>
+                    </div>
+
+                    <!-- Bottom navigation -->
+                    <div class="lesson-nav">
+                        <a href="learn.html" class="btn btn-ghost">← Back to Lessons</a>
+                        <button id="lesson-next-btn" class="btn btn-primary">Next Lesson →</button>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- ═══════════════ LESSON COMPLETE (celebration) ═══════════════ -->
+    <div class="lesson-complete" id="lesson-complete">
+        <div class="lesson-complete-inner">
+            <span class="celebrate-icon">🎉</span>
+            <h2 id="complete-title">Lesson Complete!</h2>
+            <p id="complete-msg">You've mastered the King. Ready for the next piece?</p>
+            <div class="actions">
+                <a href="learn.html" class="btn btn-ghost">All Lessons</a>
+                <button id="complete-next-btn" class="btn btn-success">Next Lesson →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ LIBRARIES ═══════════════ -->
+    <script src="auth.js" onerror="/* optional */"></script>
+
+    <!-- ═══════════════ LEARN SCRIPT ═══════════════ -->
+    <script src="learn.js"></script>
+</body>
+</html>

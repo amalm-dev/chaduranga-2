@@ -4,221 +4,237 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chaduranga 2.0 — 12×12 Chess Variant</title>
-    <meta name="description" content="Play Chaduranga 2.0 - a custom 12x12 chess variant with Tigers, Roosters, and terrain squares">
+    <meta name="description" content="Play Chaduranga 2.0 — a custom 12×12 chess variant with Tigers, Roosters, and terrain squares">
+    <meta name="theme-color" content="#1c1b19">
+    <link rel="icon" type="image/png" href="assets/logo.png">
+    <link rel="apple-touch-icon" href="assets/logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
     <div class="app">
-        <header class="header">
-            <div class="logo">
-                <span class="chess-icon">♚</span>
-                <h1>Chaduranga 2.0</h1>
+
+        <!-- ═══════════════ LEFT NAV RAIL (chess.com style) ═══════════════ -->
+        <nav class="nav-rail" aria-label="Main navigation">
+            <a href="index.html" class="nav-rail-logo" aria-label="Chaduranga home">
+                <img src="assets/logo.png" alt="Chaduranga" class="nav-rail-logo-img">
+            </a>
+
+            <a href="index.html" class="nav-rail-item active" title="Play">
+                <span class="nav-rail-icon">♟</span>
+                <span class="nav-rail-label">Play</span>
+            </a>
+
+            <a href="learn.html" class="nav-rail-item" title="Learn">
+                <span class="nav-rail-icon">📖</span>
+                <span class="nav-rail-label">Learn</span>
+            </a>
+
+            <button class="nav-rail-item" id="nav-puzzles-btn" title="Puzzles (coming soon)">
+                <span class="nav-rail-icon">🧩</span>
+                <span class="nav-rail-label">Puzzles</span>
+            </button>
+
+            <button class="nav-rail-item" id="nav-train-btn" title="Train (coming soon)">
+                <span class="nav-rail-icon">🎯</span>
+                <span class="nav-rail-label">Train</span>
+            </button>
+
+            <div class="nav-rail-spacer"></div>
+
+            <button class="nav-rail-item" id="nav-settings-btn" title="Settings">
+                <span class="nav-rail-icon">⚙️</span>
+                <span class="nav-rail-label">Settings</span>
+            </button>
+        </nav>
+
+        <!-- ═══════════════ MAIN APP CONTENT ═══════════════ -->
+        <div class="app-content">
+
+            <!-- ─── HEADER ─── -->
+            <header class="header">
+                <div class="header-left">
+                    <button id="new-game-btn" class="btn btn-primary" aria-label="New game">＋ New Game</button>
+                    <button id="online-btn" class="btn btn-accent" aria-label="Play online">⚡ Play Online</button>
+                </div>
+
+                <div class="header-center">
+                    <h1 class="header-title">Chaduranga <span class="header-title-version">2.0</span></h1>
+                </div>
+
+                <div class="header-right">
+                    <div class="header-settings">
+                        <button id="settings-menu-btn" class="btn btn-ghost" aria-haspopup="true" aria-expanded="false" title="View & Settings">⚙️ View</button>
+                        <div id="settings-menu" class="settings-menu" role="menu">
+                            <div class="settings-section-label">Appearance</div>
+                            <button id="toggle-3d-btn" class="settings-item" role="menuitem">🎲 3D View</button>
+                            <button id="toggle-daynight-btn" class="settings-item" role="menuitem">☀️ Day</button>
+                            <button id="biome-btn" class="settings-item" role="menuitem">🏜️ Desert</button>
+                            <button id="board-theme-btn" class="settings-item" role="menuitem">🪵 Classic</button>
+                            <div class="settings-divider"></div>
+                            <div class="settings-section-label">Gameplay</div>
+                            <button id="env-position-btn" class="settings-item" role="menuitem">🎲 Env: Random</button>
+                        </div>
+                    </div>
+                    <div class="user-area" id="user-area">
+                        <button id="login-btn" class="btn btn-ghost" onclick="AUTH && AUTH.showLoginOverlay && AUTH.showLoginOverlay()" aria-label="Login">🔑 Login</button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- ─── RESUME BANNER ─── -->
+            <div id="resume-banner" class="resume-banner hidden">
+                <span class="resume-icon">🔌</span>
+                <span class="resume-text">You have an unfinished online game.</span>
+                <button id="resume-yes-btn" class="btn btn-primary btn-sm">Resume</button>
+                <button id="resume-no-btn" class="btn btn-ghost btn-sm">Discard</button>
             </div>
-            <div class="header-controls">
-                <button id="toggle-3d-btn" class="btn btn-accent" title="Toggle 3D View">🎲 3D View</button>
-                <button id="toggle-daynight-btn" class="btn btn-ghost" title="Toggle Day/Night">☀️ Day</button>
-                <button id="biome-btn" class="btn btn-ghost" title="Change Biome">🏜️ Desert</button>
-                <button id="board-theme-btn" class="btn btn-ghost" title="Board Style">🪵 Classic</button>
-                <button id="new-game-btn" class="btn btn-primary">New Game</button>
-                <button id="undo-btn" class="btn btn-ghost">↩ Undo</button>
-                <button id="redo-btn" class="btn btn-ghost">Redo ↪</button>
-                <button id="online-btn" class="btn btn-accent">⚡ Play Online</button>
-                <button id="fullscreen-btn" class="btn btn-ghost" title="Fullscreen">⛶ Fullscreen</button>
+
+            <!-- ─── MAIN LAYOUT ─── -->
+            <main class="main">
+
+                <!-- Panel toggles (only visible in fullscreen) -->
+                <button id="toggle-left-panel" class="panel-toggle panel-toggle-left" title="Game Info" aria-label="Toggle game info panel">♞</button>
+                <button id="toggle-right-panel" class="panel-toggle panel-toggle-right" title="Info & Chat" aria-label="Toggle info and chat panel">💬</button>
+
+                <!-- ═══ LEFT PANEL — Players & Moves ═══ -->
+                <aside class="panel panel-left" id="panel-left">
+
+                    <!-- ─── BLACK PLAYER ─── -->
+                    <div id="black-player-card" class="player-card">
+                        <div class="player-header">
+                            <div class="player-indicator">
+                                <div class="player-avatar-tile">
+                                    <div class="player-dot black-dot"></div>
+                                </div>
+                                <span class="player-name">Black</span>
+                            </div>
+                            <div class="player-captured-count" id="black-captured-count">0</div>
+                        </div>
+                        <div class="player-meta">
+                            <span class="player-meta-label">Captured</span>
+                        </div>
+                        <div class="captured-pieces" id="captured-by-black"></div>
+                    </div>
+
+                    <!-- ─── GAME INFO ─── -->
+                    <div class="game-info-card">
+                        <div class="info-section">
+                            <span class="label">TURN</span>
+                            <div id="turn-indicator" class="turn-text">White</div>
+                        </div>
+                        <div class="info-section">
+                            <span class="label">STATUS</span>
+                            <div id="game-status" class="status-text">Game started</div>
+                        </div>
+                        <div class="info-section">
+                            <span class="label">MOVE</span>
+                            <div id="move-number">1</div>
+                        </div>
+                        <div class="info-section">
+                            <span class="label">TIME</span>
+                            <div id="game-timer" class="turn-text">00:00</div>
+                        </div>
+                    </div>
+
+                    <!-- ─── WHITE PLAYER ─── -->
+                    <div id="white-player-card" class="player-card">
+                        <div class="player-header">
+                            <div class="player-indicator">
+                                <div class="player-avatar-tile">
+                                    <div class="player-dot white-dot"></div>
+                                </div>
+                                <span class="player-name">White</span>
+                            </div>
+                            <div class="player-captured-count" id="white-captured-count">0</div>
+                        </div>
+                        <div class="player-meta">
+                            <span class="player-meta-label">Captured</span>
+                        </div>
+                        <div class="captured-pieces" id="captured-by-white"></div>
+                    </div>
+
+                    <!-- ─── MOVE HISTORY ─── -->
+                    <div class="move-history-card">
+                        <h3>Move History</h3>
+                        <div id="move-history" class="move-history-scroll"></div>
+                    </div>
+                </aside>
+
+                <!-- ═══ BOARD AREA ═══ -->
+                <div class="board-wrapper">
+                    <div class="col-labels top-labels" id="top-col-labels"></div>
+                    <div class="board-with-rows">
+                        <div class="row-labels left-labels" id="left-row-labels"></div>
+                        <div id="board" class="board"></div>
+                        <div class="row-labels right-labels" id="right-row-labels"></div>
+                    </div>
+                    <div id="canvas-3d" class="canvas-3d-container"></div>
+                    <div class="col-labels bottom-labels" id="bottom-col-labels"></div>
+                </div>
+
+                <!-- ═══ RIGHT PANEL — Effects & Chat ═══ -->
+                <aside class="panel panel-right" id="panel-right">
+
+                    <div id="debuff-card" class="status-card">
+                        <h3>Active Effects</h3>
+                        <div id="status-effects">
+                            <p class="no-effects">No active effects</p>
+                        </div>
+                    </div>
+
+                    <div class="chat-card hidden" id="chat-card">
+                        <h3>💬 Chat</h3>
+                        <div id="chat-messages" class="chat-messages"></div>
+                        <div class="chat-input-bar">
+                            <div class="emoji-bar" id="emoji-bar">
+                                <button class="emoji-btn" data-emoji="👍" aria-label="Thumbs up">👍</button>
+                                <button class="emoji-btn" data-emoji="😄" aria-label="Smile">😄</button>
+                                <button class="emoji-btn" data-emoji="🤔" aria-label="Thinking">🤔</button>
+                                <button class="emoji-btn" data-emoji="😮" aria-label="Surprised">😮</button>
+                                <button class="emoji-btn" data-emoji="👏" aria-label="Clap">👏</button>
+                                <button class="emoji-btn" data-emoji="🔥" aria-label="Fire">🔥</button>
+                                <button class="emoji-btn" data-emoji="💪" aria-label="Strong">💪</button>
+                                <button class="emoji-btn" data-emoji="😂" aria-label="Laugh">😂</button>
+                            </div>
+                            <div class="chat-text-input">
+                                <input type="text" id="chat-input" placeholder="Type a message..." maxlength="100">
+                                <button id="chat-send-btn" class="btn btn-primary btn-sm">Send</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="offline-hint" id="offline-hint">
+                        <span class="offline-hint-icon">💬</span>
+                        <p>Chat opens when you're playing online with a friend.</p>
+                    </div>
+                </aside>
+
+            </main>
+        </div>
+
+        <!-- ═══════════════ FLOATING DOCK ═══════════════ -->
+        <div id="floating-dock" class="floating-dock" aria-label="Quick actions">
+            <button id="undo-btn" class="dock-btn" title="Undo move" aria-label="Undo">↩</button>
+            <button id="redo-btn" class="dock-btn" title="Redo move" aria-label="Redo">↪</button>
+            <button id="reset-view-btn" class="dock-btn" title="Reset view" aria-label="Reset view">🎯</button>
+            <button id="fullscreen-btn" class="dock-btn" title="Fullscreen" aria-label="Toggle fullscreen">⛶</button>
+        </div>
+
+        <!-- ═══════════════ RECONNECT OVERLAY ═══════════════ -->
+        <div id="reconnect-overlay" class="reconnect-overlay hidden">
+            <div class="reconnect-card">
+                <div class="reconnect-spinner"></div>
+                <h3>Reconnecting…</h3>
+                <p id="reconnect-msg">Trying to restore your online game.</p>
+                <button id="reconnect-cancel-btn" class="btn btn-ghost btn-sm">Cancel</button>
             </div>
-            <div class="user-area" id="user-area">
-                <button id="login-btn" class="btn btn-ghost" onclick="AUTH.showLoginOverlay()">🔑 Login</button>
-            </div>
-        </header>
-
-        <main class="main">
-            <!-- Panel Toggle Buttons (visible in fullscreen) -->
-            <button id="toggle-left-panel" class="panel-toggle panel-toggle-left" title="Game Info">♞</button>
-            <button id="toggle-right-panel" class="panel-toggle panel-toggle-right" title="Info & Chat">💬</button>
-
-            <!-- Left Panel -->
-            <aside class="panel panel-left" id="panel-left">
-                <div id="black-player-card" class="player-card">
-                    <div class="player-indicator">
-                        <div class="player-dot black-dot"></div>
-                        <span class="player-name">Black</span>
-                    </div>
-                    <div class="captured-pieces" id="captured-by-black"></div>
-                </div>
-
-                <div class="game-info-card">
-                    <div class="info-section">
-                        <span class="label">TURN</span>
-                        <div id="turn-indicator" class="turn-text">White</div>
-                    </div>
-                    <div class="info-section">
-                        <span class="label">STATUS</span>
-                        <div id="game-status" class="status-text">Game started</div>
-                    </div>
-                    <div class="info-section">
-                        <span class="label">MOVE</span>
-                        <div id="move-number">1</div>
-                    </div>
-                </div>
-
-                <div id="white-player-card" class="player-card">
-                    <div class="player-indicator">
-                        <div class="player-dot white-dot"></div>
-                        <span class="player-name">White</span>
-                    </div>
-                    <div class="captured-pieces" id="captured-by-white"></div>
-                </div>
-
-                <div class="move-history-card">
-                    <h3>Move History</h3>
-                    <div id="move-history" class="move-history-scroll"></div>
-                </div>
-            </aside>
-
-            <!-- Board Area -->
-            <div class="board-wrapper">
-                <div class="col-labels top-labels" id="top-col-labels"></div>
-                <div class="board-with-rows">
-                    <div class="row-labels left-labels" id="left-row-labels"></div>
-                    <div id="board" class="board"></div>
-                    <div class="row-labels right-labels" id="right-row-labels"></div>
-                </div>
-                <div id="canvas-3d" class="canvas-3d-container"></div>
-                <div class="col-labels bottom-labels" id="bottom-col-labels"></div>
-            </div>
-
-            <!-- Right Panel -->
-            <aside class="panel panel-right" id="panel-right">
-                <div class="pieces-info-card manual-card">
-                    <h3>📖 Piece Manual</h3>
-
-                    <div class="piece-info">
-                        <span class="piece-icon">♚</span>
-                        <div class="piece-desc">
-                            <strong>King</strong>
-                            <p>Moves 1 square any direction. Must be protected — checkmate loses the game.</p>
-                        </div>
-                    </div>
-
-                    <div class="piece-info">
-                        <span class="piece-icon">♛</span>
-                        <div class="piece-desc">
-                            <strong>Queen</strong>
-                            <p>Unlimited range — horizontal, vertical, and diagonal.</p>
-                        </div>
-                    </div>
-
-                    <div class="piece-info">
-                        <span class="piece-icon">♜</span>
-                        <div class="piece-desc">
-                            <strong>Rook</strong>
-                            <p>Unlimited range — horizontal and vertical only. Can castle with King.</p>
-                        </div>
-                    </div>
-
-                    <div class="piece-info">
-                        <span class="piece-icon">♝</span>
-                        <div class="piece-desc">
-                            <strong>Bishop</strong>
-                            <p>Unlimited range — diagonal only. Stays on its starting color.</p>
-                        </div>
-                    </div>
-
-                    <div class="piece-info">
-                        <span class="piece-icon">♞</span>
-                        <div class="piece-desc">
-                            <strong>Knight</strong>
-                            <p>L-shape: 2+1 squares. Can jump over other pieces.</p>
-                        </div>
-                    </div>
-
-                    <div class="piece-info">
-                        <span class="piece-icon">♟</span>
-                        <div class="piece-desc">
-                            <strong>Pawn</strong>
-                            <p>Moves 1 forward (2 from start). Captures diagonally. Promotes on last rank.</p>
-                        </div>
-                    </div>
-
-                    <hr class="manual-divider">
-
-                    <div class="piece-info">
-                        <span class="piece-icon">🐅</span>
-                        <div class="piece-desc">
-                            <strong>Tiger — The Hunter</strong>
-                            <p>Moves diagonally only if it can <em>capture</em> an adjacent piece (horizontal/vertical) along its path. Jumps over own pieces. Moves to the captured piece's square.</p>
-                            <p class="terrain-note">🌲 <strong>Forest:</strong> capture range +2 squares (once per entry)</p>
-                        </div>
-                    </div>
-
-                    <div class="piece-info">
-                        <span class="piece-icon">🐓</span>
-                        <div class="piece-desc">
-                            <strong>Rooster — The Sentinel</strong>
-                            <p>Moves 2 squares diagonally forward. Captures any piece directly in front. Cannot move backward. Jumps over own pieces.</p>
-                            <p class="terrain-note">🌊 <strong>Water:</strong> movement restricted to 1 square for 3 turns</p>
-                        </div>
-                    </div>
-
-                    <hr class="manual-divider">
-                    <h3>🗺️ Terrain Effects</h3>
-
-                    <div class="piece-info">
-                        <span class="piece-icon">🌲</span>
-                        <div class="piece-desc">
-                            <strong>Forest</strong>
-                            <p>Tiger gets +2 capture range for one capture after entering.</p>
-                        </div>
-                    </div>
-                    <div class="piece-info">
-                        <span class="piece-icon">🌊</span>
-                        <div class="piece-desc">
-                            <strong>Water</strong>
-                            <p>Rooster's diagonal jump restricted to 1 square for 3 turns.</p>
-                        </div>
-                    </div>
-                    <div class="piece-info">
-                        <span class="piece-icon">🛕</span>
-                        <div class="piece-desc">
-                            <strong>Temple</strong>
-                            <p>Safe zone — pieces on temple squares cannot be captured.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="debuff-card" class="status-card">
-                    <h3>Active Effects</h3>
-                    <div id="status-effects">
-                        <p class="no-effects">No active effects</p>
-                    </div>
-                </div>
-
-                <div class="chat-card" id="chat-card">
-                    <h3>💬 Chat</h3>
-                    <div id="chat-messages" class="chat-messages"></div>
-                    <div class="chat-input-bar">
-                        <div class="emoji-bar" id="emoji-bar">
-                            <button class="emoji-btn" data-emoji="👍">👍</button>
-                            <button class="emoji-btn" data-emoji="😄">😄</button>
-                            <button class="emoji-btn" data-emoji="🤔">🤔</button>
-                            <button class="emoji-btn" data-emoji="😮">😮</button>
-                            <button class="emoji-btn" data-emoji="👏">👏</button>
-                            <button class="emoji-btn" data-emoji="🔥">🔥</button>
-                            <button class="emoji-btn" data-emoji="💪">💪</button>
-                            <button class="emoji-btn" data-emoji="😂">😂</button>
-                        </div>
-                        <div class="chat-text-input">
-                            <input type="text" id="chat-input" placeholder="Type a message..." maxlength="100">
-                            <button id="chat-send-btn" class="btn btn-primary btn-sm">Send</button>
-                        </div>
-                    </div>
-                </div>
-            </aside>
-        </main>
+        </div>
     </div>
 
-    <!-- Modals -->
+    <!-- ═══════════════ MODALS ═══════════════ -->
+
     <div id="promotion-modal" class="modal-overlay">
         <div class="modal">
             <h2>Promote Pawn</h2>
@@ -246,42 +262,49 @@
     <div id="online-modal" class="modal-overlay">
         <div class="modal">
             <h2>⚡ Play Online</h2>
-            
+
             <div class="online-section">
                 <button id="create-room-btn" class="btn btn-primary">Create Room</button>
                 <div id="room-code-display" style="display: none;">
                     <span class="label">Room Code</span>
                     <code id="room-code"></code>
                     <button id="copy-code-btn" class="btn btn-ghost">Copy</button>
+                    <button id="share-btn" class="btn btn-primary btn-sm">📤 Copy Invite</button>
+                    <canvas id="qr-code"></canvas>
+                    <p class="qr-hint">Scan with your phone to join instantly</p>
                 </div>
             </div>
 
             <div class="modal-divider">or</div>
 
             <div class="online-section">
-                <input type="text" id="join-code-input" placeholder="Enter room code">
+                <input type="text" id="join-code-input" placeholder="Enter room code" maxlength="4">
                 <button id="join-room-btn" class="btn btn-primary">Join Room</button>
             </div>
 
             <div id="connection-status" class="connection-status"></div>
-            
+
             <div class="modal-actions" style="margin-top: 24px;">
                 <button id="close-online-modal" class="btn btn-ghost">Cancel</button>
             </div>
         </div>
     </div>
 
-    <!-- Login Overlay -->
     <div id="login-overlay" class="modal-overlay">
         <div class="modal login-modal">
             <div class="login-header">
                 <span class="login-icon">♚</span>
                 <h2>Chaduranga 2.0</h2>
-                <p class="login-subtitle">12×12 Chess Variant with Tigers, Roosters & Terrain</p>
+                <p class="login-subtitle">12×12 Chess Variant with Tigers, Roosters &amp; Terrain</p>
             </div>
             <div class="login-actions">
                 <button id="google-signin-btn" class="btn btn-google">
-                    <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                    </svg>
                     Sign in with Google
                 </button>
                 <div class="login-divider"><span>or</span></div>
@@ -291,9 +314,12 @@
         </div>
     </div>
 
+    <!-- ═══════════════ LIBRARIES ═══════════════ -->
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
     <script src="auth.js"></script>
     <script src="renderer3d.js"></script>
     <script src="script.js"></script>
