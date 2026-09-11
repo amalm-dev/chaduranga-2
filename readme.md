@@ -100,7 +100,7 @@ Checkmate the enemy King, or force a stalemate for a draw.
 
 1. Push to a GitHub repo
 2. Go to **Settings → Pages → Source: main branch → / (root)**
-3. Your site will be live at `https://amalm-dev.github.io/chaduranga-2/`
+3. Play [Chaduranga 2](https://amalm-dev.github.io/chaduranga-2/)
 
 ### Netlify / Vercel
 
