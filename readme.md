@@ -154,13 +154,12 @@ Built with a ❤️ for the **Hackathon** by:
 
 | Name | Role |
 |---|---|
+| **Emerson Elgin** | Developer |
 | **Amal M** ([@amalm-dev](https://github.com/amalm-dev)) | Developer |
 | **Binesh** | Developer |
 | **Vismaya** | Developer |
 | **Niyas** | Developer |
 | **Anandu** | Developer |
-
-
 
 ---
 
