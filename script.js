@@ -22,16 +22,16 @@ const PERMANENT_TERRAIN = [
     { r: 6, c: 3,  type: 'temple' },  // d7
     { r: 7, c: 2,  type: 'water'  },  // c8
     { r: 7, c: 4,  type: 'forest' },  // e8  — black tiger 1 forest
-    { r: 4, c: 8,  type: 'forest' },  // i5  — white tiger 2 forest
-    { r: 4, c: 10, type: 'water'  },  // k5
-    { r: 5, c: 9,  type: 'temple' },  // j6
-    { r: 7, c: 8,  type: 'forest' },  // i8  — black tiger 2 forest  ★ FIXED
-    { r: 7, c: 10, type: 'water'  }   // k8  — river
+    { r: 4, c: 7,  type: 'forest' },  // h5  — white tiger 2 forest  ★ shifted
+    { r: 5, c: 8,  type: 'temple' },  // i6  — temple  ★ shifted
+    { r: 4, c: 9,  type: 'water'  },  // j5  — water  ★ shifted
+    { r: 7, c: 7,  type: 'forest' },  // h8  — black tiger 2 forest  ★ shifted
+    { r: 7, c: 9,  type: 'water'  }   // j8  — water  ★ shifted
 ];
 
 // ★ FIXED: Forest assignments (based on tiger starting column)
-const WHITE_FORESTS = [{ r: 4, c: 4 }, { r: 4, c: 8 }];   // e5, i5
-const BLACK_FORESTS = [{ r: 7, c: 4 }, { r: 7, c: 8 }];   // e8, i8  ★ FIXED
+const WHITE_FORESTS = [{ r: 4, c: 4 }, { r: 4, c: 7 }];   // e5, h5
+const BLACK_FORESTS = [{ r: 7, c: 4 }, { r: 7, c: 7 }];   // e8, h8
 
 // ═══════════════════════════════════════════════════════
 // GAME CLASS
