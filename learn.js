@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════
-// CHADURANGA 2.0 — Interactive Lesson Engine
+// CHADURANGA 2.0 — Interactive Lesson Engine (v2)
 // ═══════════════════════════════════════════════════════════
 
 // ─── Piece symbols ───
@@ -8,17 +8,29 @@ const SYMBOLS = {
     black: { king: '♚', queen: '♛', rook: '♜', bishop: '♝', knight: '♞', pawn: '♟', tiger: '🐅', rooster: '🐓' }
 };
 
-// ─── Column labels for the 12×12 board ───
+// ─── Coordinates ───
 const COLS = ['a','b','c','d','e','f','g','h','i','j','k','l'];
-const ROWS = [12,11,10,9,8,7,6,5,4,3,2,1];  // top to bottom
-
-// ═══════════════════════════════════════════════════════════
-// Coordinate shift: lessons are defined on an 8×8 grid,
-// but we display them centered on a 12×12 board.
-// ═══════════════════════════════════════════════════════════
-const BOARD_OFFSET = 2;
+const ROWS = [12,11,10,9,8,7,6,5,4,3,2,1]; // display: top → bottom
 const BOARD_SIZE = 12;
+const BOARD_OFFSET = 2; // lessons defined on 8×8, shifted to 12×12
 
+// ★ NEW: Permanent terrain layout (12×12 absolute, never changes)
+const PERMANENT_TERRAIN = [
+    { r: 4, c: 2,  type: 'water'  }, // c5  — river
+    { r: 4, c: 4,  type: 'forest' }, // e5  — white tiger 1 forest
+    { r: 6, c: 3,  type: 'temple' }, // d7
+    { r: 7, c: 2,  type: 'water'  }, // c8
+    { r: 7, c: 4,  type: 'forest' }, // e8  — black tiger 1 forest
+    { r: 4, c: 8,  type: 'forest' }, // i5  — white tiger 2 forest
+    { r: 4, c: 10, type: 'water'  }, // k5
+    { r: 5, c: 9,  type: 'temple' }, // j6
+    { r: 7, c: 8,  type: 'forest' }, // i8  — black tiger 2 forest
+    { r: 7, c: 10, type: 'water'  }  // k8  — river
+];
+const TERRAIN_MAP = {};
+PERMANENT_TERRAIN.forEach(t => { TERRAIN_MAP[`${t.r},${t.c}`] = t.type; });
+
+// ─── Coordinate shift: 8×8 lesson coords → 12×12 board ───
 function expandTo12x12(rawStep) {
     if (!rawStep) return rawStep;
     const shift = (p) => p ? { ...p, r: p.r + BOARD_OFFSET, c: p.c + BOARD_OFFSET } : p;
@@ -50,7 +62,6 @@ function getCompletedLessons() {
         return raw ? JSON.parse(raw) : {};
     } catch (e) { return {}; }
 }
-
 function markLessonComplete(id) {
     try {
         const done = getCompletedLessons();
@@ -58,13 +69,12 @@ function markLessonComplete(id) {
         localStorage.setItem(PROGRESS_KEY, JSON.stringify(done));
     } catch (e) { /* ignore */ }
 }
-
 function isLessonComplete(id) {
     return !!getCompletedLessons()[id];
 }
 
 // ═══════════════════════════════════════════════════════════
-// LESSON DATA (positions in 8×8 coordinates — auto-shifted)
+// LESSON DATA
 // ═══════════════════════════════════════════════════════════
 const LESSONS = {
 
@@ -89,7 +99,7 @@ const LESSONS = {
             },
             {
                 title: 'Cannot move into check',
-                text: 'The King can never step onto a square attacked by an enemy. The black rook rules the e-file — the King cannot approach it. Move to a safe square.',
+                text: 'The King can never step onto a square attacked by an enemy. The black rook rules the e-file — the King cannot approach it.',
                 setup: [
                     { piece: 'king', color: 'white', r: 4, c: 2 },
                     { piece: 'rook', color: 'black', r: 0, c: 4 }
@@ -106,7 +116,7 @@ const LESSONS = {
             },
             {
                 title: "Castling — the King's escape",
-                text: "Once per game, if the King and a Rook haven't moved, they can swap positions in one move. The King slides two squares; the Rook jumps over to the other side.",
+                text: "Once per game, if the King and a Rook haven't moved, they can swap positions in one move. The King slides two squares; the Rook jumps over.",
                 setup: [
                     { piece: 'king', color: 'white', r: 7, c: 4 },
                     { piece: 'rook', color: 'white', r: 7, c: 7 }
@@ -138,11 +148,11 @@ const LESSONS = {
         icon: '♕',
         title: 'The Queen',
         subtitle: 'Unlimited range in all eight directions.',
-        intro: "The Queen is the most powerful piece on the board. She combines the Rook's straight-line power with the Bishop's diagonal reach — in every direction, any distance.",
+        intro: "The Queen combines the Rook's straight-line power with the Bishop's diagonal reach — any direction, any distance.",
         steps: [
             {
                 title: 'All eight directions',
-                text: 'From a central square, the Queen controls 27 squares. She sweeps along rows, columns, and both diagonals. Drop her on any highlighted square.',
+                text: 'From a central square, the Queen controls 27 squares. She sweeps along rows, columns, and both diagonals.',
                 setup: [{ piece: 'queen', color: 'white', r: 3, c: 3 }],
                 source: { r: 3, c: 3 },
                 highlights: [
@@ -155,7 +165,7 @@ const LESSONS = {
             },
             {
                 title: 'Capture and stop',
-                text: 'The Queen can take any piece in her line — but she stops on that square. She cannot jump over pieces. Capture the bishop!',
+                text: 'The Queen can take any piece in her line — but she stops on that square. Capture the bishop!',
                 setup: [
                     { piece: 'queen', color: 'white', r: 4, c: 2 },
                     { piece: 'bishop', color: 'black', r: 2, c: 4 }
@@ -181,11 +191,11 @@ const LESSONS = {
         icon: '♖',
         title: 'The Rook',
         subtitle: 'Straight lines only — but any distance.',
-        intro: 'The Rook is a powerhouse that slides along rows and columns. It teams up with the King for castling and dominates open files.',
+        intro: 'The Rook slides along rows and columns. It teams up with the King for castling and dominates open files.',
         steps: [
             {
                 title: 'Rows and columns',
-                text: 'A Rook slides any number of empty squares in the four straight directions. Drop it on any highlighted square.',
+                text: 'A Rook slides any number of empty squares in the four straight directions.',
                 setup: [{ piece: 'rook', color: 'white', r: 4, c: 4 }],
                 source: { r: 4, c: 4 },
                 highlights: [
@@ -230,11 +240,11 @@ const LESSONS = {
         icon: '♗',
         title: 'The Bishop',
         subtitle: 'Diagonals for life — never leaves its color.',
-        intro: 'The Bishop glides along diagonals of any length. Each Bishop is permanently bound to a single color — the light-squared or dark-squared diagonal network.',
+        intro: 'The Bishop glides along diagonals of any length. Each Bishop is permanently bound to a single color.',
         steps: [
             {
                 title: 'The four diagonals',
-                text: 'The Bishop sweeps in four diagonal directions. Notice it always stays on the same color. Drop it on any highlighted square.',
+                text: 'The Bishop sweeps in four diagonal directions. Notice it always stays on the same color.',
                 setup: [{ piece: 'bishop', color: 'white', r: 4, c: 3 }],
                 source: { r: 4, c: 3 },
                 highlights: [
@@ -273,11 +283,11 @@ const LESSONS = {
         icon: '♘',
         title: 'The Knight',
         subtitle: 'The only piece that jumps.',
-        intro: "The Knight moves in an L-shape: two squares in one direction, then one more at a right angle. It's the only piece that can leap over others.",
+        intro: "The Knight moves in an L-shape: two squares in one direction, then one more. It's the only piece that can leap over others.",
         steps: [
             {
                 title: 'The L-shape',
-                text: 'A Knight always moves 2+1. From its current square, it can reach eight squares. Drop it on any highlighted square.',
+                text: 'A Knight always moves 2+1. From its current square, it can reach eight squares.',
                 setup: [{ piece: 'knight', color: 'white', r: 4, c: 3 }],
                 source: { r: 4, c: 3 },
                 highlights: [
@@ -290,7 +300,7 @@ const LESSONS = {
             },
             {
                 title: 'Jumps over anything',
-                text: "The Knight doesn't care what's in its path. Even a wall of pieces can't stop it. Capture the rook!",
+                text: "The Knight doesn't care what's in its path. Capture the rook!",
                 setup: [
                     { piece: 'knight', color: 'white', r: 5, c: 3 },
                     { piece: 'pawn', color: 'white', r: 4, c: 3 },
@@ -320,11 +330,11 @@ const LESSONS = {
         icon: '♙',
         title: 'The Pawn',
         subtitle: 'March forward. Capture diagonally. Promote at the end.',
-        intro: 'The Pawn is the humblest piece, but its promotion rule makes it a threat. It moves forward one square, captures diagonally, and can become a Queen on the last rank.',
+        intro: 'The Pawn is the humblest piece, but its promotion rule makes it a threat.',
         steps: [
             {
                 title: 'Forward one square',
-                text: 'The Pawn advances forward — never sideways, never backward. Drop it on a highlighted square to move.',
+                text: 'The Pawn advances forward — never sideways, never backward.',
                 setup: [{ piece: 'pawn', color: 'white', r: 6, c: 4 }],
                 source: { r: 6, c: 4 },
                 highlights: [
@@ -335,7 +345,7 @@ const LESSONS = {
             },
             {
                 title: 'Captures diagonally',
-                text: 'When an enemy is diagonally in front, the Pawn captures it. It cannot capture straight ahead. Take the knight!',
+                text: 'The Pawn captures diagonally forward. It cannot capture straight ahead. Take the knight!',
                 setup: [
                     { piece: 'pawn', color: 'white', r: 4, c: 3 },
                     { piece: 'knight', color: 'black', r: 3, c: 4 }
@@ -346,7 +356,7 @@ const LESSONS = {
             },
             {
                 title: 'Promotion',
-                text: 'Reach the last rank and the Pawn transforms into a Queen, Rook, Bishop, or Knight — usually a Queen. Push forward!',
+                text: 'Reach the last rank and the Pawn transforms into a Queen, Rook, Bishop, or Knight — usually a Queen.',
                 setup: [{ piece: 'pawn', color: 'white', r: 1, c: 4 }],
                 source: { r: 1, c: 4 },
                 highlights: [{ r: 0, c: 4, type: 'target' }],
@@ -369,51 +379,52 @@ const LESSONS = {
     tiger: {
         icon: '🐅',
         title: 'The Tiger — The Hunter',
-        subtitle: 'One-shot. Invincible. A hunter with a designated forest.',
-        intro: 'The Tiger is unlike any other piece. It cannot be captured. It travels to its own designated Forest, then strikes ONE target before leaving the board forever.',
+        subtitle: 'Travel vulnerable. Hunt invulnerable. Then freeze forever.',
+        intro: 'The Tiger is a one-shot hunter. It is VULNERABLE while travelling to its designated forest. On its own forest it becomes INVULNERABLE and can hunt ONE target. After hunting it lands on the captured square, becomes frozen forever, and is vulnerable again.',
         steps: [
             {
-                title: 'The journey to the Forest',
-                text: 'Each Tiger is assigned a designated Forest square. It takes two turns to reach it — moving diagonally toward the forest. Take the first step.',
+                title: 'The journey — vulnerable while exposed',
+                text: 'Your Tiger starts away from its designated forest at e5. While travelling it can only move 1 square in any direction, or jump 2 squares vertically (passing over its own pieces). Reach the forest — you are NOT yet safe.',
                 setup: [
-                    { piece: 'tiger', color: 'white', r: 6, c: 2 },
-                    { piece: 'forest', color: 'terrain', r: 4, c: 4 }
-                ],
-                source: { r: 6, c: 2 },
-                highlights: [
-                    { r: 5, c: 3, type: 'move' },
-                    { r: 4, c: 4, type: 'target' }
-                ],
-                expectedMove: { from: { r: 6, c: 2 }, to: { r: 5, c: 3 } }
-            },
-            {
-                title: 'Hunting — one strike only',
-                text: 'Once on its Forest, the Tiger hunts. It attacks any enemy in the 8 surrounding squares — but the King and other Tigers are immune. Capture the knight!',
-                setup: [
-                    { piece: 'tiger', color: 'white', r: 4, c: 4 },
-                    { piece: 'forest', color: 'terrain', r: 4, c: 4 },
-                    { piece: 'knight', color: 'black', r: 3, c: 5 }
+                    { piece: 'tiger', color: 'white', r: 4, c: 4, designatedForest: { r: 2, c: 2 } },
+                    { piece: 'pawn', color: 'black', r: 3, c: 3 }
                 ],
                 source: { r: 4, c: 4 },
-                highlights: [{ r: 3, c: 5, type: 'capture' }],
-                expectedMove: { from: { r: 4, c: 4 }, to: { r: 3, c: 5 } }
+                highlights: [
+                    { r: 3, c: 3, type: 'capture' },
+                    { r: 3, c: 4, type: 'move' }, { r: 3, c: 5, type: 'move' },
+                    { r: 4, c: 3, type: 'move' }, { r: 4, c: 5, type: 'move' },
+                    { r: 5, c: 3, type: 'move' }, { r: 5, c: 4, type: 'move' }, { r: 5, c: 5, type: 'move' },
+                    { r: 2, c: 4, type: 'move' },  // 2-square vertical jump
+                    { r: 6, c: 4, type: 'move' }
+                ],
+                expectedMove: { from: { r: 4, c: 4 }, to: { r: 3, c: 4 } }
             },
             {
-                title: 'Cannot be captured',
-                text: 'Enemy pieces can never take the Tiger. It leaves on its own terms — after its one hunt. Study the position and click Next.',
+                title: 'On its own forest — invulnerable + hunting ready',
+                text: 'Now the Tiger sits on its designated forest (e5). Here it is INVULNERABLE — no piece can capture it. It can also hunt ONE adjacent enemy (8 surrounding squares). The King and other Tigers are immune. Capture the knight!',
                 setup: [
-                    { piece: 'tiger', color: 'white', r: 4, c: 4 },
-                    { piece: 'forest', color: 'terrain', r: 4, c: 4 },
-                    { piece: 'rook', color: 'black', r: 0, c: 4 }
+                    { piece: 'tiger', color: 'white', r: 2, c: 2, designatedForest: { r: 2, c: 2 } },
+                    { piece: 'knight', color: 'black', r: 1, c: 3 }
                 ],
-                source: { r: 4, c: 4 }
+                source: { r: 2, c: 2 },
+                highlights: [{ r: 1, c: 3, type: 'capture' }],
+                expectedMove: { from: { r: 2, c: 2 }, to: { r: 1, c: 3 } }
+            },
+            {
+                title: 'After the hunt — spent, frozen, vulnerable',
+                text: 'After hunting, the Tiger lands on the captured square and CANNOT move or capture again for the rest of the game. It also loses its invulnerability — enemies can now capture it. Study the position and click Next.',
+                setup: [
+                    { piece: 'tiger', color: 'white', r: 2, c: 2, designatedForest: { r: 2, c: 2 }, tigerStationary: true },
+                    { piece: 'rook', color: 'black', r: 5, c: 2 }
+                ],
+                source: { r: 2, c: 2 }
             }
         ],
         sandbox: {
             pieces: [
-                { piece: 'tiger', color: 'white', r: 6, c: 2 },
-                { piece: 'forest', color: 'terrain', r: 4, c: 4 },
-                { piece: 'pawn', color: 'black', r: 3, c: 5 },
+                { piece: 'tiger', color: 'white', r: 5, c: 5, designatedForest: { r: 2, c: 2 } },
+                { piece: 'pawn', color: 'black', r: 3, c: 3 },
                 { piece: 'king', color: 'black', r: 0, c: 4 }
             ]
         },
@@ -424,12 +435,12 @@ const LESSONS = {
     rooster: {
         icon: '🐓',
         title: 'The Rooster — The Sentinel',
-        subtitle: 'Two-square diagonal leap, then capture straight ahead.',
-        intro: 'The Rooster is a reconnaissance piece that lands diagonally, then strikes forward. Water cripples it permanently — after that, it can only hop a single square.',
+        subtitle: 'Leap 2 diagonal. Capture forward. Bounded by enemy pawns. Crippled by water.',
+        intro: 'The Rooster leaps 2 squares diagonally forward, then captures 1 square straight ahead. It CANNOT move past the opponent\'s pawn row. Water — landing on it OR leaping over it — permanently halves its leap to 1 square.',
         steps: [
             {
-                title: 'Diagonal leap',
-                text: 'The Rooster leaps exactly two squares diagonally forward. It jumps over whatever is in between. Drop it on a highlighted square.',
+                title: 'The diagonal leap',
+                text: 'The Rooster leaps exactly 2 squares forward-diagonally, over any pieces in between.',
                 setup: [{ piece: 'rooster', color: 'white', r: 5, c: 3 }],
                 source: { r: 5, c: 3 },
                 highlights: [
@@ -440,33 +451,35 @@ const LESSONS = {
             },
             {
                 title: 'Then strike forward',
-                text: 'After landing, the Rooster can capture any piece directly in front of it. Land on either highlighted square.',
+                text: 'After landing, the Rooster captures the piece directly in front of it. It cannot leap forward — the strike is only 1 square ahead.',
                 setup: [
                     { piece: 'rooster', color: 'white', r: 4, c: 2 },
-                    { piece: 'pawn', color: 'black', r: 2, c: 2 }
+                    { piece: 'pawn', color: 'black', r: 3, c: 2 }
                 ],
                 source: { r: 4, c: 2 },
                 highlights: [
-                    { r: 2, c: 4, type: 'move' }
+                    { r: 2, c: 4, type: 'move' },
+                    { r: 3, c: 2, type: 'capture' }
                 ],
                 expectedMove: { from: { r: 4, c: 2 }, to: { r: 2, c: 4 } }
             },
             {
-                title: 'Water cripples it — permanently',
-                text: 'If the Rooster ever lands on a water square, its flight is permanently reduced: from then on it can only hop a single diagonal square. No timer — it never recovers. Try moving onto the water square.',
+                title: 'Water cripples permanently — even by leaping over it',
+                text: 'Landing on water permanently halves your leap to 1 square. Leaping OVER water does the same. Try landing on the water at c8.',
                 setup: [
-                    { piece: 'rooster', color: 'white', r: 5, c: 3 },
-                    { piece: 'water', color: 'terrain', r: 4, c: 4 }
+                    { piece: 'rooster', color: 'white', r: 3, c: 2 }
                 ],
-                source: { r: 5, c: 3 },
-                highlights: [{ r: 4, c: 4, type: 'move' }],
-                expectedMove: { from: { r: 5, c: 3 }, to: { r: 4, c: 4 } }
+                source: { r: 3, c: 2 },
+                highlights: [
+                    { r: 5, c: 0, type: 'target' }, // → c8 (water)
+                    { r: 5, c: 4, type: 'move' }
+                ],
+                expectedMove: { from: { r: 3, c: 2 }, to: { r: 5, c: 0 } }
             }
         ],
         sandbox: {
             pieces: [
                 { piece: 'rooster', color: 'white', r: 5, c: 3 },
-                { piece: 'water', color: 'terrain', r: 4, c: 4 },
                 { piece: 'pawn', color: 'black', r: 3, c: 3 },
                 { piece: 'king', color: 'black', r: 0, c: 4 }
             ]
@@ -478,35 +491,33 @@ const LESSONS = {
     forest: {
         icon: '🌲',
         title: 'Forest Squares',
-        subtitle: "The Tiger's home ground.",
-        intro: "Four Forest squares are placed on the board at the start of every game. Each Forest is assigned to a single Tiger — it's where they gain their hunting power.",
+        subtitle: "The Tiger's home ground — invulnerability + hunting.",
+        intro: "Four Forest squares are fixed on the board: e5 and i5 for White's Tigers; e8 and j8 for Black's. Each Tiger owns one. While standing on its OWN forest, a Tiger is invulnerable and can hunt once.",
         steps: [
             {
-                title: 'The designated Forest',
-                text: 'Every Tiger has its own Forest. The Tiger can only enter ITS OWN forest. The star (★) marks the designated forest.',
+                title: 'The designated forest',
+                text: 'Every Tiger has its own forest — e5 for the first White Tiger (left of the king), i5 for the second. The star (★) marks each forest.',
                 setup: [
-                    { piece: 'forest', color: 'terrain', r: 4, c: 4 },
-                    { piece: 'tiger', color: 'white', r: 5, c: 5 }
+                    { piece: 'tiger', color: 'white', r: 5, c: 5, designatedForest: { r: 2, c: 2 } }
                 ],
                 source: { r: 5, c: 5 },
-                highlights: [{ r: 4, c: 4, type: 'target' }]
+                highlights: [{ r: 2, c: 2, type: 'target' }]
             },
             {
-                title: 'Forest grants the buff',
-                text: 'When a Tiger lands on its forest, it gains +2 attack range for its hunt — reaching the black pawn.',
+                title: 'Forest = invulnerability + hunt',
+                text: 'On its own forest, the Tiger is invulnerable. No piece can capture it while it sits there. It can hunt one adjacent enemy in the same turn.',
                 setup: [
-                    { piece: 'forest', color: 'terrain', r: 4, c: 4 },
-                    { piece: 'tiger', color: 'white', r: 4, c: 4 },
-                    { piece: 'pawn', color: 'black', r: 2, c: 6 }
+                    { piece: 'tiger', color: 'white', r: 2, c: 2, designatedForest: { r: 2, c: 2 } },
+                    { piece: 'pawn', color: 'black', r: 1, c: 3 }
                 ],
-                source: { r: 4, c: 4 },
-                highlights: [{ r: 2, c: 6, type: 'capture' }]
+                source: { r: 2, c: 2 },
+                highlights: [{ r: 1, c: 3, type: 'capture' }],
+                expectedMove: { from: { r: 2, c: 2 }, to: { r: 1, c: 3 } }
             }
         ],
         sandbox: {
             pieces: [
-                { piece: 'forest', color: 'terrain', r: 4, c: 4 },
-                { piece: 'tiger', color: 'white', r: 6, c: 2 },
+                { piece: 'tiger', color: 'white', r: 5, c: 5, designatedForest: { r: 2, c: 2 } },
                 { piece: 'king', color: 'black', r: 0, c: 4 }
             ]
         },
@@ -517,31 +528,35 @@ const LESSONS = {
     water: {
         icon: '🌊',
         title: 'Water Squares',
-        subtitle: 'Permanently cripples any Rooster that lands on it.',
-        intro: 'Four Water squares are placed randomly each game. Roosters are the only piece affected — once a Rooster lands on water, its flight is permanently cut to a single diagonal square for the rest of the game.',
+        subtitle: 'Permanently cripples Roosters.',
+        intro: 'Four Water squares are fixed on the board: c5, k5 (rank 5), c8, k8 (rank 8). Roosters are the only piece affected — once crippled, their leap is permanently halved to 1 square.',
         steps: [
             {
-                title: 'Water cripples Roosters',
-                text: 'Landing on water is a permanent penalty for the Rooster. It can never again make the 2-square diagonal leap — only a single step.',
+                title: 'Landing on water',
+                text: 'A Rooster that lands directly on water loses full flight power for the rest of the game. Its leap becomes 1 square instead of 2.',
                 setup: [
-                    { piece: 'water', color: 'terrain', r: 4, c: 4 },
                     { piece: 'rooster', color: 'white', r: 4, c: 4 }
                 ],
-                source: { r: 4, c: 4 }
+                source: { r: 4, c: 4 },
+                highlights: [
+                    { r: 5, c: 2, type: 'move' } // → lands on c5 water
+                ],
+                expectedMove: { from: { r: 4, c: 4 }, to: { r: 5, c: 2 } }
             },
             {
-                title: 'The 💧 badge is permanent',
-                text: 'A 💧 badge sticks to the Rooster for the rest of the game — there is no recovery. It becomes a slow, short-range piece from that moment on.',
+                title: 'Leaping OVER water also cripples',
+                text: 'Even leaping over a water square without landing on it is enough to permanently cripple the Rooster. The 💧 badge shows the cripple.',
                 setup: [
-                    { piece: 'water', color: 'terrain', r: 4, c: 4 },
-                    { piece: 'rooster', color: 'white', r: 4, c: 4 }
+                    { piece: 'rooster', color: 'white', r: 2, c: 2 }
                 ],
-                source: { r: 4, c: 4 }
+                source: { r: 2, c: 2 },
+                highlights: [
+                    { r: 4, c: 0, type: 'target' } // → c5 water
+                ]
             }
         ],
         sandbox: {
             pieces: [
-                { piece: 'water', color: 'terrain', r: 4, c: 4 },
                 { piece: 'rooster', color: 'white', r: 5, c: 3 },
                 { piece: 'king', color: 'black', r: 0, c: 4 }
             ]
@@ -553,35 +568,33 @@ const LESSONS = {
     temple: {
         icon: '🛕',
         title: 'Temple (Safe Zone)',
-        subtitle: 'Temporary protection from one attack.',
-        intro: 'Two Temples are placed on the board. A piece standing on a Temple cannot be captured — but that protection is used up after one attempted attack.',
+        subtitle: 'Permanent invulnerability while standing on it.',
+        intro: 'Two Temples are fixed on the board at d7 and j6. Any piece — of either color — standing on a Temple is invulnerable to capture. This protection is PERMANENT while the piece remains there.',
         steps: [
             {
-                title: 'Protected on the Temple',
-                text: 'A piece on a Temple square gets a 🛡 badge. It cannot be captured while it sits there.',
+                title: 'Protected while standing on the Temple',
+                text: 'A piece on a Temple square is invulnerable. No enemy can capture it — no matter the angle or power. Look at the shield badge on the piece.',
                 setup: [
-                    { piece: 'temple', color: 'terrain', r: 4, c: 4 },
-                    { piece: 'bishop', color: 'white', r: 4, c: 4 }
+                    { piece: 'bishop', color: 'white', r: 2, c: 2 },
+                    { piece: 'rook', color: 'black', r: 6, c: 2 }
                 ],
-                source: { r: 4, c: 4 }
+                source: { r: 2, c: 2 }
             },
             {
                 title: 'Protection disappears when moving off',
-                text: 'The moment the protected piece steps off the Temple, the shield is gone. The black rook can now capture it.',
+                text: 'The moment the piece steps off the Temple, the shield is gone. The black rook can now capture it.',
                 setup: [
-                    { piece: 'temple', color: 'terrain', r: 4, c: 4 },
-                    { piece: 'bishop', color: 'white', r: 3, c: 3 },
-                    { piece: 'rook', color: 'black', r: 0, c: 3 }
+                    { piece: 'bishop', color: 'white', r: 1, c: 1 },
+                    { piece: 'rook', color: 'black', r: 4, c: 1 }
                 ],
-                source: { r: 0, c: 3 },
-                highlights: [{ r: 3, c: 3, type: 'capture' }]
+                source: { r: 4, c: 1 },
+                highlights: [{ r: 1, c: 1, type: 'capture' }]
             }
         ],
         sandbox: {
             pieces: [
-                { piece: 'temple', color: 'terrain', r: 4, c: 4 },
-                { piece: 'knight', color: 'white', r: 4, c: 4 },
-                { piece: 'rook', color: 'black', r: 4, c: 0 },
+                { piece: 'knight', color: 'white', r: 4, c: 1 },
+                { piece: 'rook', color: 'black', r: 4, c: 5 },
                 { piece: 'king', color: 'black', r: 0, c: 7 }
             ]
         },
@@ -593,7 +606,7 @@ const LESSONS = {
         icon: '🏰',
         title: 'Castling',
         subtitle: 'One move — two pieces, twice the safety.',
-        intro: "Castling is a King move that also activates a Rook. It's the fastest way to safety and the only move that touches two pieces at once.",
+        intro: "Castling is a King move that also activates a Rook. It's the fastest way to safety.",
         steps: [
             {
                 title: 'Setup for castling',
@@ -606,7 +619,7 @@ const LESSONS = {
             },
             {
                 title: 'Kingside castling',
-                text: 'The King slides two squares toward the Rook. The Rook jumps over the King to land right beside it. Move the King to the castle square!',
+                text: 'The King slides two squares toward the Rook. The Rook jumps over to land beside it.',
                 setup: [
                     { piece: 'king', color: 'white', r: 7, c: 4 },
                     { piece: 'rook', color: 'white', r: 7, c: 7 }
@@ -620,7 +633,7 @@ const LESSONS = {
             },
             {
                 title: 'Queenside castling',
-                text: 'Castling the other direction works the same way — the King moves two squares left and the Rook jumps to its other side.',
+                text: 'Castling the other direction works the same way.',
                 setup: [
                     { piece: 'king', color: 'white', r: 7, c: 4 },
                     { piece: 'rook', color: 'white', r: 7, c: 0 }
@@ -649,11 +662,11 @@ const LESSONS = {
         icon: '⚔️',
         title: 'En Passant',
         subtitle: 'The sneakiest capture in chess.',
-        intro: 'When a pawn tries to leap past an enemy pawn using its two-square first move, the enemy pawn can capture it "in passing" — as if it had only moved one square.',
+        intro: 'When a pawn leaps past an enemy pawn using its two-square first move, the enemy pawn can capture it "in passing".',
         steps: [
             {
                 title: 'The trap is set',
-                text: 'Your pawn sits beside an enemy pawn that just advanced two squares. En passant lets you capture as if it had only moved one — land behind it!',
+                text: 'Your pawn sits beside an enemy pawn that just advanced two squares. En passant lets you capture as if it had only moved one.',
                 setup: [
                     { piece: 'pawn', color: 'white', r: 3, c: 4 },
                     { piece: 'pawn', color: 'black', r: 3, c: 3 }
@@ -679,7 +692,7 @@ const LESSONS = {
         icon: '🤝',
         title: 'Piece Coordination',
         subtitle: 'Pieces protect and amplify each other.',
-        intro: 'Winning chess is about coordination. Pieces that protect each other are safe. Pieces that combine attacks are dangerous.',
+        intro: 'Pieces that protect each other are safe. Pieces that combine attacks are dangerous.',
         steps: [
             {
                 title: 'Defend your pieces',
@@ -725,7 +738,7 @@ const LESSONS = {
         icon: '👑',
         title: 'Checkmate Patterns',
         subtitle: 'The classic finishes every player should know.',
-        intro: 'Checkmate = the King is in check and has no escape. Recognising common patterns lets you spot your own chances and avoid getting caught.',
+        intro: 'Checkmate = the King is in check and has no escape.',
         steps: [
             {
                 title: 'Back-rank mate',
@@ -742,7 +755,7 @@ const LESSONS = {
             },
             {
                 title: 'Smothered mate',
-                text: 'A Knight can mate a King that has no escape squares. The King is literally smothered by its own pieces.',
+                text: 'A Knight can mate a King that has no escape squares.',
                 setup: [
                     { piece: 'king', color: 'black', r: 0, c: 7 },
                     { piece: 'rook', color: 'black', r: 1, c: 6 },
@@ -770,11 +783,11 @@ const LESSONS = {
         icon: '🧩',
         title: 'Puzzle — Fork Attack',
         subtitle: 'Find the winning move.',
-        intro: 'Your Knight can attack two pieces at once — forcing your opponent to lose one. Spot the square.',
+        intro: 'Your Knight can attack two pieces at once — forcing your opponent to lose one.',
         steps: [
             {
                 title: 'Read the position',
-                text: "Black's King and Rook are on the same rank. Find a Knight move that attacks BOTH simultaneously. Nf5 does the trick!",
+                text: "Black's King and Rook are on the same rank. Find a Knight move that attacks BOTH simultaneously.",
                 setup: [
                     { piece: 'knight', color: 'white', r: 5, c: 3 },
                     { piece: 'king', color: 'black', r: 3, c: 4 },
@@ -798,7 +811,7 @@ const LESSONS = {
 };
 
 // ═══════════════════════════════════════════════════════════
-// DEMO BOARD — 12×12 grid with INTERACTIVE support
+// DEMO BOARD — 12×12 grid with permanent terrain
 // ═══════════════════════════════════════════════════════════
 class DemoBoard {
     constructor(containerEl) {
@@ -807,19 +820,26 @@ class DemoBoard {
         this.el.innerHTML = '';
         this.cells = [];
         this.state = [];
-        this.mode = 'locked'; // 'locked' | 'playable' | 'sandbox'
+        this.mode = 'locked';
         this.expectedMove = null;
         this.allowedMoves = [];
         this.selected = null;
         this.onCorrectMove = null;
         this.onWrongMove = null;
-        this._terrainMap = {};
 
+        // Init state arrays
         for (let r = 0; r < this.size; r++) {
             this.state[r] = [];
             this.cells[r] = [];
             for (let c = 0; c < this.size; c++) {
                 this.state[r][c] = null;
+            }
+        }
+
+        // ★ Create cells in VISUAL order: r=11 (rank 12) at top → r=0 (rank 1) at bottom
+        // This aligns the board with the ROWS label array [12..1] top-to-bottom.
+        for (let r = this.size - 1; r >= 0; r--) {
+            for (let c = 0; c < this.size; c++) {
                 const sq = document.createElement('div');
                 sq.className = 'square ' + ((r + c) % 2 === 0 ? 'dark' : 'light');
                 sq.dataset.r = r;
@@ -842,46 +862,29 @@ class DemoBoard {
         this.render();
     }
 
-    // Store a shadow terrain map so we can render both terrain AND piece on the same cell
-    _buildTerrainMap(pieces) {
-        this._terrainMap = {};
-        (pieces || []).forEach(p => {
-            if ((p.piece === 'forest' || p.piece === 'water' || p.piece === 'temple') &&
-                p.r >= 0 && p.r < this.size && p.c >= 0 && p.c < this.size) {
-                this._terrainMap[`${p.r},${p.c}`] = p.piece;
-            }
-        });
-    }
-
+    // ★ Permanent terrain is now the ONLY source of terrain
     getTerrainAt(r, c) {
-        return this._terrainMap[`${r},${c}`] || null;
+        return TERRAIN_MAP[`${r},${c}`] || null;
     }
 
-    // Apply terrain first, then pieces ON TOP so tiger is not overwritten by forest
     setState(pieces) {
         for (let r = 0; r < this.size; r++)
             for (let c = 0; c < this.size; c++)
                 this.state[r][c] = null;
 
-        const allPieces = pieces || [];
-        const isTerrain = (p) => p.piece === 'forest' || p.piece === 'water' || p.piece === 'temple';
-
-        // Pass 1: terrain
-        allPieces.forEach(p => {
-            if (p.r >= 0 && p.r < this.size && p.c >= 0 && p.c < this.size && isTerrain(p)) {
-                this.state[p.r][p.c] = { piece: p.piece, color: p.color };
-            }
-        });
-        // Pass 2: pieces (overwrite terrain if same square)
-        allPieces.forEach(p => {
-            if (p.r >= 0 && p.r < this.size && p.c >= 0 && p.c < this.size && !isTerrain(p)) {
-                this.state[p.r][p.c] = { piece: p.piece, color: p.color };
+        (pieces || []).forEach(p => {
+            if (p.r >= 0 && p.r < this.size && p.c >= 0 && p.c < this.size) {
+                this.state[p.r][p.c] = {
+                    piece: p.piece,
+                    color: p.color,
+                    designatedForest: p.designatedForest || null,
+                    tigerStationary: p.tigerStationary || false
+                };
             }
         });
         this.render();
     }
 
-    // Render terrain overlay even when a piece is on top of it
     render() {
         for (let r = 0; r < this.size; r++) {
             for (let c = 0; c < this.size; c++) {
@@ -889,34 +892,32 @@ class DemoBoard {
                 cell.innerHTML = '';
                 cell.className = 'square ' + ((r + c) % 2 === 0 ? 'dark' : 'light');
 
+                // ★ Permanent terrain — always applied
+                const terrain = this.getTerrainAt(r, c);
+                if (terrain === 'forest') {
+                    cell.classList.add('terrain-designated-forest');
+                } else if (terrain === 'water') {
+                    cell.classList.add('terrain-water');
+                } else if (terrain === 'temple') {
+                    cell.classList.add('terrain-temple');
+                }
+
                 const s = this.state[r][c];
-                const terrainHere = this.getTerrainAt(r, c);
-
-                // Apply terrain classes even if a piece is on top
                 if (s) {
-                    if (s.piece === 'forest') {
-                        cell.classList.add('terrain-designated-forest');
-                        continue;
+                    // Glow for compatible piece on its active terrain
+                    if (terrain) {
+                        const isTigerOnForest = s.piece === 'tiger' && terrain === 'forest';
+                        const isRoosterOnWater = s.piece === 'rooster' && terrain === 'water';
+                        const isPieceOnTemple = terrain === 'temple';
+                        if (isTigerOnForest || isRoosterOnWater || isPieceOnTemple) {
+                            cell.classList.add('terrain-active');
+                        }
                     }
-                    if (s.piece === 'water') {
-                        cell.classList.add('terrain-water');
-                        continue;
-                    }
-                    if (s.piece === 'temple') {
-                        cell.classList.add('terrain-temple');
-                        continue;
-                    }
-
-                    // Piece on top of terrain
-                    if (terrainHere === 'forest') cell.classList.add('terrain-designated-forest');
-                    if (terrainHere === 'water')  cell.classList.add('terrain-water');
-                    if (terrainHere === 'temple') cell.classList.add('terrain-temple');
 
                     const pieceEl = document.createElement('span');
                     pieceEl.className = `piece ${s.color}`;
                     pieceEl.dataset.type = s.piece;
 
-                    // ★ Try custom image first — fall back to emoji if missing
                     const img = document.createElement('img');
                     img.src = `assets/models/pieces/${s.color}-${s.piece}.png`;
                     img.alt = (SYMBOLS[s.color] && SYMBOLS[s.color][s.piece]) || '?';
@@ -928,12 +929,13 @@ class DemoBoard {
                     };
                     pieceEl.appendChild(img);
 
+                    // Badges
+                    if (terrain === 'temple') pieceEl.classList.add('protected');
+                    if (s.piece === 'tiger' && terrain === 'forest') pieceEl.classList.add('buffed');
+                    if (s.piece === 'rooster' && terrain === 'water') pieceEl.classList.add('debuffed');
+                    if (s.piece === 'tiger' && s.tigerStationary) pieceEl.classList.add('tiger-spent');
+
                     cell.appendChild(pieceEl);
-                } else if (terrainHere) {
-                    // Terrain-only cell (no shadow map overlap)
-                    if (terrainHere === 'forest') cell.classList.add('terrain-designated-forest');
-                    if (terrainHere === 'water')  cell.classList.add('terrain-water');
-                    if (terrainHere === 'temple') cell.classList.add('terrain-temple');
                 }
             }
         }
@@ -987,7 +989,6 @@ class DemoBoard {
         this.allowedMoves = allowedDestinations || [];
     }
 
-    // Accepts ANY highlighted destination, not just the one expected
     handleClick(r, c) {
         if (this.mode === 'sandbox') return this.handleSandboxClick(r, c);
         if (this.mode !== 'playable' || !this.expectedMove) return;
@@ -995,7 +996,6 @@ class DemoBoard {
         const from = this.expectedMove.from;
 
         if (!this.selected) {
-            // First click — must be the source piece
             if (r === from.r && c === from.c) {
                 this.selected = { r, c };
                 this.cells[r][c].classList.add('selected');
@@ -1005,7 +1005,6 @@ class DemoBoard {
             return;
         }
 
-        // Second click — check if destination is allowed
         if (r === from.r && c === from.c) {
             this.selected = null;
             this.cells[r][c].classList.remove('selected');
@@ -1015,7 +1014,6 @@ class DemoBoard {
         const isAllowed = this.allowedMoves.some(m => m.r === r && m.c === c);
 
         if (isAllowed) {
-            // ✓ Correct move — execute it
             const piece = this.state[from.r][from.c];
             this.state[r][c] = piece;
             this.state[from.r][from.c] = null;
@@ -1027,14 +1025,15 @@ class DemoBoard {
             this.allowedMoves = [];
             if (this.onCorrectMove) this.onCorrectMove();
         } else {
-            // ✗ Not a valid destination — deselect + flash
             this.selected = null;
             this.cells[from.r][from.c].classList.remove('selected');
             if (this.onWrongMove) this.onWrongMove();
         }
     }
 
-    // ─── Sandbox mode: user can move any white piece freely ───
+    // ═══════════════════════════════════════════════════════
+    // SANDBOX (free play) — updated for new rules
+    // ═══════════════════════════════════════════════════════
     handleSandboxClick(r, c) {
         const s = this.state[r][c];
         const selected = this.selected;
@@ -1084,9 +1083,14 @@ class DemoBoard {
         const moves = [];
         const N = this.size;
 
-        // Detect if a rooster is standing on water (permanent cripple)
+        // ★ Rooster crippled? Standing on water = crippled.
         const isRoosterCrippled = (piece, row, col) => {
-            return piece === 'rooster' && this.getTerrainAt(row, col) === 'water';
+            return piece.type === 'rooster' && this.getTerrainAt(row, col) === 'water';
+        };
+
+        // ★ Tiger on its own forest? (simplified: on any forest)
+        const isTigerOnForest = (piece, row, col) => {
+            return piece.type === 'tiger' && this.getTerrainAt(row, col) === 'forest';
         };
 
         const add = (nr, nc) => {
@@ -1155,42 +1159,71 @@ class DemoBoard {
                 break;
             }
             case 'rooster': {
-                const dir = s.color === 'white' ? -1 : 1;
-                // ★ NEW: If rooster is on water (permanent cripple), only allow 1-square diagonal hops
-                const step = isRoosterCrippled('rooster', r, c) ? 1 : 2;
+                const dir = s.color === 'white' ? -1 : 1; // on visual board White moves up (decreasing r)
+                const crippled = isRoosterCrippled(s, r, c);
+                const step = crippled ? 1 : 2;
+                // Boundary: can't move past enemy pawn row.
+                // On this visual board: White rooster (moving up, decreasing r) can't go above row 1 (rank 2);
+                // Black rooster can't go below row 10 (rank 11).
+                const boundary = s.color === 'white' ? 1 : 10;
 
+                // 2 (or 1) diagonal leaps
                 [-1, 1].forEach(dc => {
                     const nr = r + step * dir, nc = c + step * dc;
                     if (nr < 0 || nr >= N || nc < 0 || nc >= N) return;
+                    if (s.color === 'white' && nr < boundary) return;
+                    if (s.color === 'black' && nr > boundary) return;
                     if (!this.state[nr][nc]) moves.push({ r: nr, c: nc, capture: false });
                 });
+
+                // Forward capture (1 square)
                 const capR = r + dir;
                 if (capR >= 0 && capR < N) {
-                    const t = this.state[capR][c];
-                    if (t && t.color !== s.color && !['forest','water','temple'].includes(t.piece)) {
-                        moves.push({ r: capR, c, capture: true });
+                    const ok = (s.color === 'white' && capR >= boundary) ||
+                               (s.color === 'black' && capR <= boundary);
+                    if (ok) {
+                        const t = this.state[capR][c];
+                        if (t && t.color !== s.color && !['forest','water','temple','king','tiger'].includes(t.piece)) {
+                            moves.push({ r: capR, c, capture: true });
+                        }
                     }
                 }
                 break;
             }
-            case 'tiger':
-                [[-1,-1],[-1,1],[1,-1],[1,1]].forEach(([dr, dc]) => {
-                    for (let dist = 1; dist <= 2; dist++) {
-                        const nr = r + dr*dist, nc = c + dc*dist;
-                        if (nr < 0 || nr >= N || nc < 0 || nc >= N) break;
-                        if (!this.state[nr][nc]) moves.push({ r: nr, c: nc, capture: false });
-                        else break;
-                    }
-                });
-                [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]].forEach(([dr, dc]) => {
-                    const nr = r + dr, nc = c + dc;
-                    if (nr < 0 || nr >= N || nc < 0 || nc >= N) return;
-                    const t = this.state[nr][nc];
-                    if (t && t.color !== s.color && !['forest','water','temple','king','tiger'].includes(t.piece)) {
-                        moves.push({ r: nr, c: nc, capture: true });
-                    }
-                });
+            case 'tiger': {
+                const onForest = isTigerOnForest(s, r, c);
+                if (onForest) {
+                    // Hunt: 8 adjacent enemies
+                    [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]].forEach(([dr, dc]) => {
+                        const nr = r + dr, nc = c + dc;
+                        if (nr < 0 || nr >= N || nc < 0 || nc >= N) return;
+                        const t = this.state[nr][nc];
+                        if (t && t.color !== s.color && !['forest','water','temple','king','tiger'].includes(t.piece)) {
+                            moves.push({ r: nr, c: nc, capture: true });
+                        }
+                    });
+                } else {
+                    // 1-square any direction
+                    [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]].forEach(([dr, dc]) => {
+                        const nr = r + dr, nc = c + dc;
+                        if (nr < 0 || nr >= N || nc < 0 || nc >= N) return;
+                        const t = this.state[nr][nc];
+                        if (!t) moves.push({ r: nr, c: nc, capture: false });
+                        else if (t.color !== s.color && !['forest','water','temple','king','tiger'].includes(t.piece))
+                            moves.push({ r: nr, c: nc, capture: true });
+                    });
+                    // 2-square vertical jump (over any piece)
+                    [-1, 1].forEach(dr => {
+                        const nr = r + dr * 2;
+                        if (nr < 0 || nr >= N) return;
+                        const t = this.state[nr][c];
+                        if (!t) moves.push({ r: nr, c, capture: false });
+                        else if (t.color !== s.color && !['forest','water','temple','king','tiger'].includes(t.piece))
+                            moves.push({ r: nr, c, capture: true });
+                    });
+                }
                 break;
+            }
         }
 
         return moves;
@@ -1198,7 +1231,7 @@ class DemoBoard {
 }
 
 // ═══════════════════════════════════════════════════════════
-// COACH — drives the coach card + step flow
+// COACH
 // ═══════════════════════════════════════════════════════════
 class Coach {
     constructor(lesson, lessonId, board) {
@@ -1224,33 +1257,23 @@ class Coach {
         newSkip.addEventListener('click', () => this.finish());
     }
 
-    start() {
-        this.showStep(0);
-    }
+    start() { this.showStep(0); }
 
     showStep(index) {
         this.currentStep = index;
         this.solved = false;
 
-        if (index >= this.lesson.steps.length) {
-            this.finish();
-            return;
-        }
+        if (index >= this.lesson.steps.length) { this.finish(); return; }
 
         const rawStep = this.lesson.steps[index];
         const step = expandTo12x12(rawStep);
 
-        // Build a shadow terrain map so terrain + piece can coexist
-        this.board._buildTerrainMap(step.setup);
-
-        // Render board
         this.board.reset();
         this.board.setState(step.setup || []);
         this.board.applySource(step.source);
         this.board.applyHighlights(step.highlights);
         this.board.applyDanger(step.danger);
 
-        // Pass BOTH the expected move AND the list of allowed destinations
         const isInteractive = !!step.expectedMove;
         if (isInteractive) {
             const allowed = (step.highlights || [])
@@ -1266,7 +1289,6 @@ class Coach {
             this.board.setMode('locked');
         }
 
-        // Update coach card
         document.getElementById('coach-step').textContent = `STEP ${index + 1} OF ${this.lesson.steps.length}`;
         document.getElementById('coach-title').textContent = step.title;
         document.getElementById('coach-text').textContent = step.text;
@@ -1295,18 +1317,14 @@ class Coach {
 
     onStepSolved() {
         this.solved = true;
-
         const statusEl = document.getElementById('coach-status');
         statusEl.classList.remove('waiting', 'hint');
         statusEl.classList.add('correct');
         statusEl.textContent = 'Correct! Click Next to continue';
-
         document.getElementById('coach-next').disabled = false;
-
         const coachCard = document.getElementById('coach-card');
         coachCard.classList.remove('waiting');
         coachCard.classList.add('correct');
-
         this.updateProgress();
     }
 
@@ -1326,27 +1344,19 @@ class Coach {
     }
 
     nextStep() {
-        if (this.currentStep + 1 >= this.lesson.steps.length) {
-            this.finish();
-            return;
-        }
+        if (this.currentStep + 1 >= this.lesson.steps.length) { this.finish(); return; }
         this.showStep(this.currentStep + 1);
     }
 
     finish() {
         if (this.finished) return;
         this.finished = true;
-
-        // Mark complete
         markLessonComplete(this.lessonId);
-
         document.getElementById('lesson-pct').textContent = '100%';
         document.getElementById('lesson-bar-fill').style.width = '100%';
 
-        // Enter sandbox
         if (this.lesson.sandbox) {
             const sandboxPieces = expandTo12x12({ setup: this.lesson.sandbox.pieces }).setup;
-            this.board._buildTerrainMap(sandboxPieces);
             this.board.reset();
             this.board.setState(sandboxPieces);
             this.board.setMode('sandbox');
@@ -1363,7 +1373,6 @@ class Coach {
             document.getElementById('coach-next').disabled = true;
             document.getElementById('coach-skip').textContent = 'Finish';
         }
-
         setTimeout(() => this.showComplete(), 700);
     }
 
@@ -1393,7 +1402,6 @@ class Coach {
                 location.hash = '';
             });
         }
-
         modal.classList.add('active');
     }
 
@@ -1420,23 +1428,17 @@ class Coach {
 }
 
 // ═══════════════════════════════════════════════════════════
-// COORDINATE LABEL HELPERS — build (a–l / 1–12) strips around
-// the lesson board using the .lesson-board-with-coords layout
+// COORDINATE LABELS around the lesson board
 // ═══════════════════════════════════════════════════════════
 function wrapBoardWithCoords(boardEl) {
-    // If already wrapped, don't double-wrap
     if (boardEl.parentElement && boardEl.parentElement.classList.contains('lesson-board-with-coords')) {
         return boardEl.parentElement;
     }
 
-    // Create wrapper
     const wrapper = document.createElement('div');
     wrapper.className = 'lesson-board-with-coords';
-
-    // Insert wrapper in place of boardEl
     boardEl.parentNode.insertBefore(wrapper, boardEl);
 
-    // Build coordinate strips
     const topStrip    = document.createElement('div');
     const bottomStrip = document.createElement('div');
     const leftStrip   = document.createElement('div');
@@ -1460,7 +1462,6 @@ function wrapBoardWithCoords(boardEl) {
         rightStrip.appendChild(s2);
     });
 
-    // Grid layout: strips + board
     wrapper.appendChild(topStrip);
     wrapper.appendChild(leftStrip);
     wrapper.appendChild(boardEl);
@@ -1504,17 +1505,14 @@ function route() {
 
     document.getElementById('coach-skip').textContent = 'Skip';
 
-    // Get the board area and reset it so no old wrapper lingers
     const boardArea = document.querySelector('.lesson-board-area');
     boardArea.innerHTML = '';
 
-    // Create a fresh board element
     const boardEl = document.createElement('div');
     boardEl.id = 'lesson-board';
     boardEl.className = 'lesson-board';
     boardArea.appendChild(boardEl);
 
-    // ★ Wrap board with coordinate strips (a–l / 1–12)
     wrapBoardWithCoords(boardEl);
 
     currentBoard = new DemoBoard(boardEl);
@@ -1528,12 +1526,10 @@ function route() {
     };
 }
 
-// Add a small ✓ badge to completed lesson cards
 function refreshLandingBadges() {
     document.querySelectorAll('.learn-card').forEach(card => {
         const id = card.dataset.lesson;
         if (!id) return;
-        // Remove old badge
         card.querySelector('.learn-card-done')?.remove();
         if (isLessonComplete(id)) {
             const badge = document.createElement('span');
@@ -1551,7 +1547,6 @@ function refreshLandingBadges() {
 window.addEventListener('hashchange', route);
 
 window.addEventListener('DOMContentLoaded', () => {
-    // Route all [data-lesson] click targets (hero buttons + cards) to hash navigation
     document.querySelectorAll('[data-lesson]').forEach(el => {
         el.addEventListener('click', (e) => {
             e.preventDefault();

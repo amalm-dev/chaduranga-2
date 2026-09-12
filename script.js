@@ -12,11 +12,30 @@ const PIECE_SYMBOLS = {
 
 const INITIAL_ROW = ['rook','knight','rooster','bishop','tiger','queen','king','tiger','bishop','rooster','knight','rook'];
 
-// Storage keys
 const LS_SESSION_KEY  = 'chaduranga_online_session';
 const LS_ENV_MODE_KEY = 'chaduranga_env_mode';
 
-// ─── GAME CLASS ───
+// ★ FIXED: Permanent terrain layout (never changes)
+const PERMANENT_TERRAIN = [
+    { r: 4, c: 2,  type: 'water'  },  // c5  — river
+    { r: 4, c: 4,  type: 'forest' },  // e5  — white tiger 1 forest
+    { r: 6, c: 3,  type: 'temple' },  // d7
+    { r: 7, c: 2,  type: 'water'  },  // c8
+    { r: 7, c: 4,  type: 'forest' },  // e8  — black tiger 1 forest
+    { r: 4, c: 8,  type: 'forest' },  // i5  — white tiger 2 forest
+    { r: 4, c: 10, type: 'water'  },  // k5
+    { r: 5, c: 9,  type: 'temple' },  // j6
+    { r: 7, c: 8,  type: 'forest' },  // i8  — black tiger 2 forest  ★ FIXED
+    { r: 7, c: 10, type: 'water'  }   // k8  — river
+];
+
+// ★ FIXED: Forest assignments (based on tiger starting column)
+const WHITE_FORESTS = [{ r: 4, c: 4 }, { r: 4, c: 8 }];   // e5, i5
+const BLACK_FORESTS = [{ r: 7, c: 4 }, { r: 7, c: 8 }];   // e8, i8  ★ FIXED
+
+// ═══════════════════════════════════════════════════════
+// GAME CLASS
+// ═══════════════════════════════════════════════════════
 class ChessGame {
     constructor() {
         this.board = [];
@@ -34,14 +53,9 @@ class ChessGame {
         this.moveLog = [];
         this.currentMoveEntry = null;
         this.redoStack = [];
-
-        // ★ FLIP: whether the board is rendered from Black's perspective
         this.boardFlipped = false;
+        this.envMode = 'permanent'; // ★ always permanent now
 
-        // Environment position mode
-        this.envMode = localStorage.getItem(LS_ENV_MODE_KEY) || 'random';
-
-        // Timer
         this.timerSeconds = 0;
         this.timerInterval = null;
         this.timerRunning = false;
@@ -49,7 +63,6 @@ class ChessGame {
         this.initTerrain();
     }
 
-    // ── Board init ──
     initBoard() {
         this.board = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
         this.pieceIdCounter = 0;
@@ -73,81 +86,47 @@ class ChessGame {
             waterCrippled: false,
             isProtected: false,
             designatedForest: null,
+            tigerStationary: false,   // ★ tiger post-hunt flag
             id: `${color}-${type}-${this.pieceIdCounter++}`
         };
     }
 
+    // ★ NEW: Always use the permanent terrain layout
     initTerrain() {
         this.terrain = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
-
-        if (this.envMode === 'permanent') {
-            const PERMANENT = [
-                { r: 3, c: 4, type: 'forest' }, { r: 8, c: 7, type: 'forest' },
-                { r: 4, c: 7, type: 'forest' }, { r: 7, c: 4, type: 'forest' },
-                { r: 2, c: 5, type: 'water'  }, { r: 9, c: 6, type: 'water' },
-                { r: 5, c: 3, type: 'water'  }, { r: 6, c: 8, type: 'water' },
-                { r: 4, c: 4, type: 'temple' }, { r: 7, c: 7, type: 'temple' }
-            ];
-            PERMANENT.forEach(t => { this.terrain[t.r][t.c] = t.type; });
-            return;
-        }
-
-        const usedPositions = new Set();
-        const placePair = (type) => {
-            let r, c, attempts = 0;
-            do {
-                r = Math.floor(Math.random() * 4) + 2;
-                c = Math.floor(Math.random() * BOARD_SIZE);
-                attempts++;
-            } while (usedPositions.has(`${r},${c}`) && attempts < 100);
-            if (attempts >= 100) return false;
-            const mirrorR = BOARD_SIZE - 1 - r;
-            const mirrorC = BOARD_SIZE - 1 - c;
-            usedPositions.add(`${r},${c}`);
-            usedPositions.add(`${mirrorR},${mirrorC}`);
-            this.terrain[r][c] = type;
-            this.terrain[mirrorR][mirrorC] = type;
-            return true;
-        };
-        placePair('forest'); placePair('forest');
-        placePair('water');  placePair('water');
-        placePair('temple');
+        PERMANENT_TERRAIN.forEach(t => { this.terrain[t.r][t.c] = t.type; });
     }
 
     setEnvMode(mode) {
-        this.envMode = mode;
-        localStorage.setItem(LS_ENV_MODE_KEY, mode);
+        // No-op now — terrain is always permanent. Kept for compatibility.
+        this.envMode = 'permanent';
         this.initTerrain();
         this.assignForests();
         this.renderBoard();
         this.updateUI();
     }
 
+    // ★ NEW: Fixed forest assignments based on tiger column
     assignForests() {
-        const forests = [];
-        for (let r = 0; r < BOARD_SIZE; r++)
-            for (let c = 0; c < BOARD_SIZE; c++)
-                if (this.terrain[r][c] === 'forest') forests.push({ r, c });
-
-        const tigers = [];
-        for (let r = 0; r < BOARD_SIZE; r++)
+        const whiteTigers = [];
+        const blackTigers = [];
+        for (let r = 0; r < BOARD_SIZE; r++) {
             for (let c = 0; c < BOARD_SIZE; c++) {
                 const p = this.board[r][c];
-                if (p && p.type === 'tiger') tigers.push({ piece: p, r, c });
+                if (p && p.type === 'tiger') {
+                    if (p.color === 'white') whiteTigers.push({ piece: p, c });
+                    else blackTigers.push({ piece: p, c });
+                }
             }
-
-        const available = [...forests];
-        for (const tiger of tigers) {
-            if (available.length === 0) break;
-            let bestIdx = 0, bestDist = Infinity;
-            for (let i = 0; i < available.length; i++) {
-                const f = available[i];
-                const dist = Math.abs(tiger.r - f.r) + Math.abs(tiger.c - f.c);
-                if (dist < bestDist) { bestDist = dist; bestIdx = i; }
-            }
-            const chosen = available.splice(bestIdx, 1)[0];
-            tiger.piece.designatedForest = { r: chosen.r, c: chosen.c };
         }
+        whiteTigers.sort((a, b) => a.c - b.c);
+        blackTigers.sort((a, b) => a.c - b.c);
+        whiteTigers.forEach((t, i) => {
+            if (i < WHITE_FORESTS.length) t.piece.designatedForest = { ...WHITE_FORESTS[i] };
+        });
+        blackTigers.forEach((t, i) => {
+            if (i < BLACK_FORESTS.length) t.piece.designatedForest = { ...BLACK_FORESTS[i] };
+        });
     }
 
     deepCopyBoard(boardToCopy) {
@@ -183,21 +162,11 @@ class ChessGame {
             this.updateTimerUI();
         }, 1000);
     }
-
     stopTimer() {
         this.timerRunning = false;
-        if (this.timerInterval) {
-            clearInterval(this.timerInterval);
-            this.timerInterval = null;
-        }
+        if (this.timerInterval) { clearInterval(this.timerInterval); this.timerInterval = null; }
     }
-
-    resetTimer() {
-        this.stopTimer();
-        this.timerSeconds = 0;
-        this.updateTimerUI();
-    }
-
+    resetTimer() { this.stopTimer(); this.timerSeconds = 0; this.updateTimerUI(); }
     updateTimerUI() {
         const el = document.getElementById('game-timer');
         if (!el) return;
@@ -206,19 +175,13 @@ class ChessGame {
         el.textContent = `${m}:${s}`;
     }
 
-    // ═══════════════════════════════════════════════════════
-    // RENDERING (with board flip support)
-    // ═══════════════════════════════════════════════════════
+    // ═══ RENDERING ═══
     renderBoard() {
         const boardEl = document.getElementById('board');
         if (!boardEl) return;
         boardEl.innerHTML = '';
-
         const flipped = this.boardFlipped;
 
-        // ★ FLIP: iterate in a direction that depends on perspective.
-        // White's view: r=11 (rank 1) at bottom, r=0 (rank 12) at top.
-        // Black's view: r=0 (rank 12) at bottom, r=11 (rank 1) at top.
         for (let i = 0; i < BOARD_SIZE; i++) {
             for (let j = 0; j < BOARD_SIZE; j++) {
                 const r = flipped ? i : (BOARD_SIZE - 1 - i);
@@ -246,11 +209,23 @@ class ChessGame {
 
                 const piece = this.board[r][c];
                 if (piece) {
+                    // ★ NEW: glow when a compatible piece is on its active terrain
+                    if (this.terrain[r][c]) {
+                        const t = this.terrain[r][c];
+                        const isTigerOnOwnForest = piece.type === 'tiger' &&
+                            piece.designatedForest &&
+                            piece.designatedForest.r === r && piece.designatedForest.c === c;
+                        const isRoosterOnWater = piece.type === 'rooster' && t === 'water';
+                        const isPieceOnTemple = t === 'temple';
+                        if (isTigerOnOwnForest || isRoosterOnWater || isPieceOnTemple) {
+                            square.classList.add('terrain-active');
+                        }
+                    }
+
                     const pieceEl = document.createElement('span');
                     pieceEl.className = `piece ${piece.color}`;
                     pieceEl.dataset.type = piece.type;
 
-                    // ★ Custom image first, emoji fallback
                     const img = document.createElement('img');
                     img.src = `assets/models/pieces/${piece.color}-${piece.type}.png`;
                     img.alt = PIECE_SYMBOLS[piece.color][piece.type];
@@ -265,6 +240,7 @@ class ChessGame {
                     if (piece.isProtected) pieceEl.classList.add('protected');
                     if (piece.type === 'tiger' && piece.forestBuff) pieceEl.classList.add('buffed');
                     if (piece.type === 'rooster' && piece.waterCrippled) pieceEl.classList.add('debuffed');
+                    if (piece.type === 'tiger' && piece.tigerStationary) pieceEl.classList.add('tiger-spent');
 
                     square.appendChild(pieceEl);
                 }
@@ -284,30 +260,22 @@ class ChessGame {
         const rightRows = document.getElementById('right-row-labels');
         if (!topCols || !bottomCols || !leftRows || !rightRows) return;
 
-        // ★ FLIP: always rebuild labels so flipping updates them
-        topCols.innerHTML = '';
-        bottomCols.innerHTML = '';
-        leftRows.innerHTML = '';
-        rightRows.innerHTML = '';
+        topCols.innerHTML = ''; bottomCols.innerHTML = '';
+        leftRows.innerHTML = ''; rightRows.innerHTML = '';
 
         const flipped = this.boardFlipped;
-
-        // Column labels (files)
         const cols = flipped ? [...COLUMNS].reverse() : COLUMNS;
         cols.forEach(c => {
             const s1 = document.createElement('span'); s1.textContent = c; topCols.appendChild(s1);
             const s2 = document.createElement('span'); s2.textContent = c; bottomCols.appendChild(s2);
         });
 
-        // Row labels (ranks)
         if (flipped) {
-            // Black's view: rank 1 at top → rank 12 at bottom
             for (let r = 1; r <= BOARD_SIZE; r++) {
                 const s1 = document.createElement('span'); s1.textContent = r; leftRows.appendChild(s1);
                 const s2 = document.createElement('span'); s2.textContent = r; rightRows.appendChild(s2);
             }
         } else {
-            // White's view: rank 12 at top → rank 1 at bottom
             for (let r = BOARD_SIZE; r >= 1; r--) {
                 const s1 = document.createElement('span'); s1.textContent = r; leftRows.appendChild(s1);
                 const s2 = document.createElement('span'); s2.textContent = r; rightRows.appendChild(s2);
@@ -318,7 +286,6 @@ class ChessGame {
     updateUI() {
         const turnInd = document.getElementById('turn-indicator');
         if (turnInd) turnInd.textContent = this.currentPlayer.charAt(0).toUpperCase() + this.currentPlayer.slice(1);
-
         const moveNum = document.getElementById('move-number');
         if (moveNum) moveNum.textContent = this.moveNumber;
 
@@ -334,7 +301,6 @@ class ChessGame {
         const wContainer = document.getElementById('captured-by-white');
         const bContainer = document.getElementById('captured-by-black');
         if (!wContainer || !bContainer) return;
-
         wContainer.innerHTML = '';
         bContainer.innerHTML = '';
 
@@ -344,7 +310,6 @@ class ChessGame {
             el.textContent = PIECE_SYMBOLS.black[p.type];
             wContainer.appendChild(el);
         });
-
         this.capturedPieces.black.forEach(p => {
             const el = document.createElement('span');
             el.className = 'captured-piece white';
@@ -357,25 +322,41 @@ class ChessGame {
         const effectsEl = document.getElementById('status-effects');
         if (!effectsEl) return;
         effectsEl.innerHTML = '';
-
         let any = false;
+
         for (let r = 0; r < BOARD_SIZE; r++) {
             for (let c = 0; c < BOARD_SIZE; c++) {
                 const p = this.board[r][c];
                 if (!p) continue;
 
-                if (p.type === 'tiger' && p.forestBuff) {
-                    any = true;
-                    const el = document.createElement('div');
-                    el.className = 'status-effect-item';
-                    el.textContent = `${p.color} Tiger: Forest Buff (+2 range)`;
-                    effectsEl.appendChild(el);
+                if (p.type === 'tiger') {
+                    const df = p.designatedForest;
+                    const onOwn = df && df.r === r && df.c === c;
+                    if (p.tigerStationary) {
+                        any = true;
+                        const el = document.createElement('div');
+                        el.className = 'status-effect-item';
+                        el.textContent = `${p.color} Tiger: Spent — vulnerable & frozen`;
+                        effectsEl.appendChild(el);
+                    } else if (onOwn) {
+                        any = true;
+                        const el = document.createElement('div');
+                        el.className = 'status-effect-item';
+                        el.textContent = `${p.color} Tiger: On forest — invulnerable, hunting ready`;
+                        effectsEl.appendChild(el);
+                    } else {
+                        any = true;
+                        const el = document.createElement('div');
+                        el.className = 'status-effect-item';
+                        el.textContent = `${p.color} Tiger: Travelling — vulnerable`;
+                        effectsEl.appendChild(el);
+                    }
                 }
                 if (p.type === 'rooster' && p.waterCrippled) {
                     any = true;
                     const el = document.createElement('div');
                     el.className = 'status-effect-item';
-                    el.textContent = `${p.color} Rooster: Water-Crippled (permanent)`;
+                    el.textContent = `${p.color} Rooster: Water-crippled (permanent)`;
                     effectsEl.appendChild(el);
                 }
                 if (p.isProtected) {
@@ -450,7 +431,6 @@ class ChessGame {
                 }
             }
         }
-
         if (!piece.hasMoved && !this.isInCheck(piece.color) && c === 6) {
             const enemy = piece.color === 'white' ? 'black' : 'white';
             const rook1 = this.board[r][11];
@@ -539,71 +519,83 @@ class ChessGame {
         return moves;
     }
 
+    // ★ NEW TIGER LOGIC
+    // - While travelling: vulnerable, can pass over own pieces, 1-square any dir OR 2-square vertical jump
+    // - On own forest: invulnerable, can hunt one adjacent enemy (not king/tiger/temple-protected)
+    // - After hunt: lands on captured square, stationary + vulnerable, no more moves
     getTigerMoves(r, c, piece) {
         const moves = [];
         const forest = piece.designatedForest;
         if (!forest) return moves;
+        if (piece.tigerStationary) return moves;   // spent — no moves
 
-        const inForest = (r === forest.r && c === forest.c);
+        const onOwnForest = (r === forest.r && c === forest.c);
 
-        if (inForest) {
-            const range = piece.forestBuff ? 3 : 1;
+        if (onOwnForest) {
+            // Hunt: 8 adjacent squares
             const dirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
-
             for (const [dr, dc] of dirs) {
-                for (let dist = 1; dist <= range; dist++) {
-                    const cr = r + dr * dist;
-                    const cc = c + dc * dist;
-                    if (!this.isInBounds(cr, cc)) break;
-
-                    const target = this.board[cr][cc];
-                    if (target) {
-                        if (target.color !== piece.color &&
-                            target.type !== 'king' &&
-                            target.type !== 'tiger') {
-                            const targetProtected = target.isProtected &&
-                                                    this.terrain[cr][cc] === 'temple';
-                            if (!targetProtected) {
-                                moves.push({ toRow: cr, toCol: cc, isCapture: true, isTigerMove: true, fromForest: true });
-                            }
-                        }
-                        break;
-                    }
+                const nr = r + dr, nc = c + dc;
+                if (!this.isInBounds(nr, nc)) continue;
+                const target = this.board[nr][nc];
+                if (target && target.color !== piece.color &&
+                    target.type !== 'king' && target.type !== 'tiger') {
+                    // Temple = permanent protection
+                    if (this.terrain[nr][nc] === 'temple') continue;
+                    moves.push({ toRow: nr, toCol: nc, isCapture: true, isTigerHunt: true });
                 }
             }
-        } else {
-            const dr = Math.sign(forest.r - r);
-            const dc = Math.sign(forest.c - c);
+            return moves;
+        }
 
-            if (dr !== 0 && dc !== 0) {
-                for (let dist = 1; dist <= 2; dist++) {
-                    const nr = r + dr * dist;
-                    const nc = c + dc * dist;
-                    if (!this.isInBounds(nr, nc)) break;
+        // Traveling
+        // 1-square in all 8 dirs (blocked by enemy pieces unless capturable)
+        const dirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+        for (const [dr, dc] of dirs) {
+            const nr = r + dr, nc = c + dc;
+            if (!this.isInBounds(nr, nc)) continue;
+            const target = this.board[nr][nc];
+            if (!target) {
+                moves.push({ toRow: nr, toCol: nc, isCapture: false });
+            } else if (target.color !== piece.color &&
+                       target.type !== 'king' && target.type !== 'tiger') {
+                if (this.terrain[nr][nc] === 'temple') continue;
+                moves.push({ toRow: nr, toCol: nc, isCapture: true });
+            }
+            // own piece: block (can't land)
+        }
 
-                    const target = this.board[nr][nc];
-                    const isDestination = (nr === forest.r && nc === forest.c);
+        // 2-square vertical jump (skipping 1) — passes over own pieces
+        for (const dir of [-1, 1]) {
+            const nr = r + dir * 2;
+            if (!this.isInBounds(nr, c)) continue;
+            const target = this.board[nr][c];
+            if (!target) {
+                moves.push({ toRow: nr, toCol: c, isCapture: false, isTigerJump: true });
+            } else if (target.color !== piece.color &&
+                       target.type !== 'king' && target.type !== 'tiger') {
+                if (this.terrain[nr][c] === 'temple') continue;
+                moves.push({ toRow: nr, toCol: c, isCapture: true, isTigerJump: true });
+            }
+        }
 
-                    if (!target) {
-                        moves.push({ toRow: nr, toCol: nc, isCapture: false, fromForest: false });
-                        if (isDestination) break;
-                    } else {
-                        if (isDestination &&
-                            target.color !== piece.color &&
-                            target.type !== 'king' &&
-                            target.type !== 'tiger') {
-                            const targetProtected = target.isProtected &&
-                                                    this.terrain[nr][nc] === 'temple';
-                            if (!targetProtected) {
-                                moves.push({ toRow: nr, toCol: nc, isCapture: true, isTigerMove: true, fromForest: false });
-                            }
-                        }
-                        break;
-                    }
+        // ★ Special case: enemy standing on tiger's designated forest, tiger within reach
+        const fTarget = this.board[forest.r][forest.c];
+        if (fTarget && fTarget.color !== piece.color &&
+            fTarget.type !== 'king' && fTarget.type !== 'tiger') {
+            if (this.terrain[forest.r][forest.c] !== 'temple') {
+                const dist = Math.abs(forest.r - r) + Math.abs(forest.c - c);
+                if (dist <= 2) {
+                    moves.push({
+                        toRow: forest.r, toCol: forest.c,
+                        isCapture: true, isTigerJump: true,
+                        isTigerForestStrike: true
+                    });
                 }
             }
         }
 
+        // Deduplicate
         const seen = new Set();
         return moves.filter(m => {
             const k = `${m.toRow},${m.toCol}`;
@@ -613,32 +605,59 @@ class ChessGame {
         });
     }
 
+    // ★ UPDATED ROOSTER
+    // - 2-diagonal leap forward (or 1 if crippled)
+    // - Cannot move past the opponent pawn starting row
+    // - Crippled if lands on water, OR if the mid (skipped) square is water
     getRoosterMoves(r, c, piece) {
         const moves = [];
         const dir = piece.color === 'white' ? 1 : -1;
         const dist = piece.waterCrippled ? 1 : 2;
+        const boundaryRow = piece.color === 'white' ? 10 : 1;
 
+        // Diagonal leap(s)
         for (const dcDir of [-1, 1]) {
             const nr = r + dir * dist;
             const nc = c + dcDir * dist;
-            if (this.isInBounds(nr, nc) && !this.board[nr][nc]) {
-                moves.push({ toRow: nr, toCol: nc, isCapture: false });
+            if (!this.isInBounds(nr, nc)) continue;
+            // Boundary check
+            if (piece.color === 'white' && nr > boundaryRow) continue;
+            if (piece.color === 'black' && nr < boundaryRow) continue;
+
+            if (!this.board[nr][nc]) {
+                moves.push({
+                    toRow: nr, toCol: nc, isCapture: false,
+                    isTigerJump: false,
+                    skipR: (fromR => fromR)(r),
+                    skipC: c
+                });
+                // store mid for later use in makeMove
+                const m = moves[moves.length - 1];
+                m.midR = (r + nr) / 2;
+                m.midC = (c + nc) / 2;
             }
         }
 
+        // Forward capture (1 square)
         const capR = r + dir, capC = c;
         if (this.isInBounds(capR, capC)) {
-            const target = this.board[capR][capC];
-            if (target && target.color !== piece.color && target.type !== 'tiger') {
-                const protectedHere = target.isProtected && this.terrain[capR][capC] === 'temple';
-                if (!protectedHere) {
-                    moves.push({ toRow: capR, toCol: capC, isCapture: true });
+            let allowed = true;
+            if (piece.color === 'white' && capR > boundaryRow) allowed = false;
+            if (piece.color === 'black' && capR < boundaryRow) allowed = false;
+
+            if (allowed) {
+                const target = this.board[capR][capC];
+                if (target && target.color !== piece.color && target.type !== 'tiger') {
+                    if (this.terrain[capR][capC] !== 'temple') {
+                        moves.push({ toRow: capR, toCol: capC, isCapture: true });
+                    }
                 }
             }
         }
         return moves;
     }
 
+    // ★ UPDATED: filter legal moves with permanent temple protection + tiger vulnerability
     filterLegalMoves(r, c, rawMoves) {
         const piece = this.board[r][c];
         const color = piece.color;
@@ -647,8 +666,19 @@ class ChessGame {
         for (const move of rawMoves) {
             if (move.isCapture && !move.isEnPassant) {
                 const target = this.board[move.toRow][move.toCol];
-                if (target && target.type === 'tiger') continue;
-                if (this.terrain[move.toRow][move.toCol] === 'temple' && target && target.isProtected) continue;
+                if (target) {
+                    // ★ Tiger capture rules
+                    if (target.type === 'tiger') {
+                        const tf = target.designatedForest;
+                        const targetOnOwnForest = tf &&
+                            tf.r === move.toRow && tf.c === move.toCol;
+                        // Invulnerable while on own forest
+                        if (targetOnOwnForest) continue;
+                        // Otherwise capturable (travelling OR spent)
+                    }
+                    // ★ Temple permanent protection
+                    if (this.terrain[move.toRow][move.toCol] === 'temple') continue;
+                }
             }
             if (move.isEnPassant) {
                 if (this.terrain[r][move.toCol] === 'temple') continue;
@@ -666,7 +696,6 @@ class ChessGame {
         this.board[move.toRow][move.toCol] = piece;
         this.board[fromR][fromC] = null;
         if (move.isEnPassant) this.board[fromR][move.toCol] = null;
-
         const inCheck = this.isInCheck(color);
         this.board = savedBoard;
         return inCheck;
@@ -716,6 +745,7 @@ class ChessGame {
                 const rdir = piece.color === 'white' ? 1 : -1;
                 return dr === rdir && dc === 0;
             }
+            // ★ Tiger does NOT attack/check the king
             default: return false;
         }
     }
@@ -747,12 +777,10 @@ class ChessGame {
     async handleSquareClick(r, c) {
         if (online.isOnline && !online.isMyTurn()) return;
         if (this.gameOver) return;
-
         const p = this.board[r][c];
 
         if (this.selectedSquare) {
             const { r: fromR, c: fromC } = this.selectedSquare;
-
             if (fromR === r && fromC === c) { this.deselectPiece(); return; }
             if (p && p.color === this.currentPlayer) { this.selectPiece(r, c); return; }
 
@@ -790,9 +818,16 @@ class ChessGame {
 
     makeMove(fromR, fromC, move) {
         this.saveState();
-
         const piece = this.board[fromR][fromC];
         this.redoStack = [];
+
+        // ★ Rooster: detect river crossing BEFORE moving
+        let roosterCrossedRiver = false;
+        if (piece.type === 'rooster' && !piece.waterCrippled && move.midR !== undefined) {
+            if (this.terrain[move.midR] && this.terrain[move.midR][move.midC] === 'water') {
+                roosterCrossedRiver = true;
+            }
+        }
 
         this.board[move.toRow][move.toCol] = piece;
         this.board[fromR][fromC] = null;
@@ -808,14 +843,14 @@ class ChessGame {
             if (target) this.handleCapture(target);
         }
 
-        if (move.isTigerMove && move.isCapture) {
-            const wasInForest = move.fromForest === true;
-            if (wasInForest) {
-                piece.forestBuff = false;
-                this.board[move.toRow][move.toCol] = null;
-            } else {
-                piece.forestBuff = true;
-            }
+        // ★ TIGER: after hunting, becomes stationary
+        if (move.isTigerHunt) {
+            piece.tigerStationary = true;
+            piece.forestBuff = false;
+        }
+        // ★ TIGER: special forest strike — same effect
+        if (move.isTigerForestStrike) {
+            piece.tigerStationary = true;
         }
 
         if (move.isCastle) {
@@ -837,6 +872,7 @@ class ChessGame {
 
         const landedPiece = this.board[move.toRow][move.toCol];
         if (landedPiece) {
+            // Tiger forest buff (visual only now)
             if (landedPiece.type === 'tiger' && this.terrain[move.toRow][move.toCol] === 'forest') {
                 if (landedPiece.designatedForest &&
                     landedPiece.designatedForest.r === move.toRow &&
@@ -844,9 +880,15 @@ class ChessGame {
                     landedPiece.forestBuff = true;
                 }
             }
+            // Rooster water cripple — landing on water
             if (landedPiece.type === 'rooster' && this.terrain[move.toRow][move.toCol] === 'water') {
                 landedPiece.waterCrippled = true;
             }
+            // Rooster water cripple — leaping OVER water
+            if (landedPiece.type === 'rooster' && roosterCrossedRiver) {
+                landedPiece.waterCrippled = true;
+            }
+            // Temple protection
             if (this.terrain[move.toRow][move.toCol] === 'temple') {
                 landedPiece.isProtected = true;
             } else {
@@ -874,7 +916,7 @@ class ChessGame {
         const PIECE_LETTERS = { king: 'K', queen: 'Q', rook: 'R', bishop: 'B', knight: 'N', pawn: '', tiger: 'Ti', rooster: 'Ro' };
         const from = COLUMNS[fromC] + (fromR + 1);
         const to = COLUMNS[toC] + (toR + 1);
-        const cap = move.isCapture || move.isTigerMove ? '×' : '→';
+        const cap = move.isCapture || move.isTigerHunt || move.isTigerForestStrike ? '×' : '→';
 
         let notation;
         if (move.isCastle) notation = toC > fromC ? 'O-O' : 'O-O-O';
@@ -934,9 +976,7 @@ class ChessGame {
         }
     }
 
-    replayMove(data) {
-        this.makeMove(data.fromR, data.fromC, data.move);
-    }
+    replayMove(data) { this.makeMove(data.fromR, data.fromC, data.move); }
 
     undo() {
         if (this.history.length === 0 || online.isOnline) return;
@@ -1002,7 +1042,6 @@ class ChessGame {
         document.getElementById('game-status').textContent = 'Move redone.';
     }
 
-    // ★ FLIP: newGame now accepts a flip flag
     newGame(flipBoard = false) {
         this.history = [];
         this.currentPlayer = 'white';
@@ -1014,7 +1053,7 @@ class ChessGame {
         this.moveLog = [];
         this.currentMoveEntry = null;
         this.redoStack = [];
-        this.boardFlipped = flipBoard;    // ★ FLIP
+        this.boardFlipped = flipBoard;
         this.initTerrain();
         this.initBoard();
         this.assignForests();
@@ -1050,7 +1089,7 @@ class ChessGame {
         modal.classList.add('active');
         document.getElementById('gameover-new-game').onclick = () => {
             modal.classList.remove('active');
-            this.newGame(this.boardFlipped);  // preserve flip on rematch
+            this.newGame(this.boardFlipped);
         };
     }
 }
@@ -1093,10 +1132,7 @@ class OnlineManager {
     saveSession(role) {
         try {
             localStorage.setItem(LS_SESSION_KEY, JSON.stringify({
-                role,
-                roomCode: this.roomCode,
-                myColor: this.myColor,
-                savedAt: Date.now()
+                role, roomCode: this.roomCode, myColor: this.myColor, savedAt: Date.now()
             }));
         } catch (e) { /* ignore */ }
     }
@@ -1120,14 +1156,12 @@ class OnlineManager {
 
     createRoom() {
         if (typeof Peer === 'undefined') { alert('PeerJS not loaded.'); return; }
-
         const attempt = (retriesLeft = 5) => {
             if (retriesLeft <= 0) {
                 document.getElementById('connection-status').textContent =
                     'Could not allocate a room code. Please try again.';
                 return;
             }
-
             const code = this.generateShortCode();
             const peerId = this.peerIdForCode(code);
             const peer = new Peer(peerId);
@@ -1148,12 +1182,10 @@ class OnlineManager {
                 this.peer = peer;
                 this.roomCode = code;
                 this.myColor = 'white';
-
                 document.getElementById('room-code').textContent = code;
                 document.getElementById('room-code-display').style.display = 'block';
                 document.getElementById('connection-status').textContent = 'Waiting for opponent…';
                 document.getElementById('create-room-btn').disabled = true;
-
                 this.generateQR(code);
             });
 
@@ -1163,7 +1195,6 @@ class OnlineManager {
                 document.getElementById('connection-status').textContent = 'Opponent connected!';
                 setTimeout(() => {
                     document.getElementById('online-modal').classList.remove('active');
-                    // ★ FLIP: pass flip flag based on my color
                     this.game.newGame(this.myColor === 'black');
                     this.isOnline = true;
                     this.game.updateUI();
@@ -1172,7 +1203,6 @@ class OnlineManager {
                 }, 800);
             });
         };
-
         attempt();
     }
 
@@ -1184,25 +1214,20 @@ class OnlineManager {
                 'Please enter a valid 4-character code.';
             return;
         }
-
         this.roomCode = code;
         this.myColor = 'black';
-
         const peer = new Peer();
         this.peer = peer;
-
         document.getElementById('connection-status').textContent = 'Connecting…';
 
         peer.on('open', () => {
             const targetId = this.peerIdForCode(code);
             this.conn = peer.connect(targetId, { reliable: true });
-
             this.conn.on('open', () => {
                 this.setupConnection();
                 document.getElementById('connection-status').textContent = 'Connected! You play Black.';
                 setTimeout(() => {
                     document.getElementById('online-modal').classList.remove('active');
-                    // ★ FLIP: pass flip flag based on my color
                     this.game.newGame(this.myColor === 'black');
                     this.isOnline = true;
                     this.game.updateUI();
@@ -1210,7 +1235,6 @@ class OnlineManager {
                     this.saveSession('joiner');
                 }, 800);
             });
-
             this.conn.on('error', (err) => {
                 console.error('Connection error:', err);
                 document.getElementById('connection-status').textContent =
@@ -1230,26 +1254,19 @@ class OnlineManager {
     generateQR(code) {
         const canvas = document.getElementById('qr-code');
         if (!canvas || typeof QRious === 'undefined') return;
-
         const baseUrl = window.location.origin + window.location.pathname;
         const joinUrl = `${baseUrl}?join=${code}`;
-
         new QRious({
-            element: canvas,
-            value: joinUrl,
-            size: 140,
-            background: '#ffffff',
-            foreground: '#1c1b19',
-            level: 'M',
-            padding: 8
+            element: canvas, value: joinUrl, size: 140,
+            background: '#ffffff', foreground: '#1c1b19',
+            level: 'M', padding: 8
         });
     }
 
     setupConnection() {
         this.conn.on('data', (data) => {
-            if (data.type === 'move') {
-                this.game.replayMove(data);
-            } else if (data.type === 'chat') {
+            if (data.type === 'move') this.game.replayMove(data);
+            else if (data.type === 'chat') {
                 const container = document.getElementById('chat-messages');
                 if (container) {
                     const div = document.createElement('div');
@@ -1266,7 +1283,6 @@ class OnlineManager {
                 if (data.isEmoji) spawnBalloonEmoji(data.text);
             }
         });
-
         this.conn.on('close', () => {
             this.isOnline = false;
             document.getElementById('game-status').textContent = 'Opponent disconnected';
@@ -1277,7 +1293,6 @@ class OnlineManager {
     sendMove(moveData) {
         if (this.conn && this.conn.open) this.conn.send({ type: 'move', ...moveData });
     }
-
     isMyTurn() { return !this.isOnline || this.myColor === this.game.currentPlayer; }
 }
 
@@ -1304,7 +1319,6 @@ const game = new ChessGame();
 const online = new OnlineManager(game);
 
 document.addEventListener('DOMContentLoaded', () => {
-
     const settingsBtn = document.getElementById('settings-menu-btn');
     const settingsMenu = document.getElementById('settings-menu');
     if (settingsBtn && settingsMenu) {
@@ -1329,12 +1343,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ─── Core controls ───
     document.getElementById('new-game-btn')?.addEventListener('click', () => {
         online.isOnline = false;
         online.clearSession();
         online.setChatVisible(false);
-        // ★ FLIP: local game starts non-flipped
         game.newGame(false);
     });
 
@@ -1345,7 +1357,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('online-modal').classList.add('active');
     });
 
-    // ─── Fullscreen ───
     document.getElementById('fullscreen-btn')?.addEventListener('click', () => {
         if (!document.fullscreenElement) {
             document.documentElement.requestFullscreen().then(() => {
@@ -1423,7 +1434,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('online-modal').classList.remove('active');
     });
 
-    // ─── 3D View ───
     let is3D = false;
     let renderer3d = null;
     document.getElementById('toggle-3d-btn')?.addEventListener('click', () => {
@@ -1485,15 +1495,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.getElementById('env-position-btn')?.addEventListener('click', () => {
-        const btn = document.getElementById('env-position-btn');
-        const nextMode = game.envMode === 'random' ? 'permanent' : 'random';
-        game.setEnvMode(nextMode);
-        btn.textContent = nextMode === 'random' ? '🎲 Env: Random' : '📌 Env: Permanent';
-    });
+    // Env position mode is now locked to permanent — button shows it
     {
         const btn = document.getElementById('env-position-btn');
-        if (btn) btn.textContent = game.envMode === 'random' ? '🎲 Env: Random' : '📌 Env: Permanent';
+        if (btn) btn.textContent = '📌 Env: Permanent (fixed)';
+        btn?.addEventListener('click', () => {
+            // re-apply permanent terrain
+            game.initTerrain();
+            game.assignForests();
+            game.renderBoard();
+            game.updateUI();
+        });
     }
 
     function addChatMessage(text, sender, isEmoji) {
@@ -1594,5 +1606,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     online.setChatVisible(false);
-    game.newGame(false);    // ★ FLIP: start non-flipped
+    game.newGame(false);
 });
