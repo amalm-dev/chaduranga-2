@@ -86,7 +86,7 @@ class ChessGame {
             waterCrippled: false,
             isProtected: false,
             designatedForest: null,
-            tigerStationary: false,   // ★ tiger post-hunt flag
+            tigerStationary: false,
             id: `${color}-${type}-${this.pieceIdCounter++}`
         };
     }
@@ -180,10 +180,11 @@ class ChessGame {
         const flipped = this.boardFlipped;
 
         // ★ First pass: compute special-effect squares
-        const tigerHaloSquares = new Set();   // "r,c" — tiger on its own forest
-        const tigerDangerSquares = new Set(); // "r,c" — 8 neighbours of an active tiger
-        const waterCrippleSquares = new Set();// "r,c" — rooster currently crippled
-        const templeHaloSquares = new Set();  // "r,c" — piece resting on a temple
+        const tigerHaloSquares = new Set();        // "r,c" — tiger on its own forest
+        const whiteTigerDangerSquares = new Set(); // "r,c" — neighbours of an ACTIVE WHITE tiger
+        const blackTigerDangerSquares = new Set(); // "r,c" — neighbours of an ACTIVE BLACK tiger
+        const waterCrippleSquares = new Set();     // "r,c" — rooster currently crippled
+        const templeHaloSquares = new Set();       // "r,c" — piece resting on a temple
 
         for (let r = 0; r < BOARD_SIZE; r++) {
             for (let c = 0; c < BOARD_SIZE; c++) {
@@ -192,14 +193,17 @@ class ChessGame {
 
                 if (p.type === 'tiger' && p.designatedForest) {
                     const df = p.designatedForest;
-                    if (df.r === r && df.c === c) {
+                    // Only an ACTIVE tiger (on its own forest, not spent) projects danger
+                    if (df.r === r && df.c === c && !p.tigerStationary) {
                         tigerHaloSquares.add(`${r},${c}`);
-                        // Danger zone: 8 neighbours (whether or not they hold pieces)
+                        const targetSet = (p.color === 'white')
+                            ? whiteTigerDangerSquares
+                            : blackTigerDangerSquares;
                         for (let dr = -1; dr <= 1; dr++) {
                             for (let dc = -1; dc <= 1; dc++) {
                                 if (dr === 0 && dc === 0) continue;
                                 const nr = r + dr, nc = c + dc;
-                                if (this.isInBounds(nr, nc)) tigerDangerSquares.add(`${nr},${nc}`);
+                                if (this.isInBounds(nr, nc)) targetSet.add(`${nr},${nc}`);
                             }
                         }
                     }
@@ -236,12 +240,13 @@ class ChessGame {
                     }
                 }
 
-                // ★ Tiger effects
+                // ★ Special effects
                 const key = `${r},${c}`;
-                if (tigerHaloSquares.has(key))     square.classList.add('tiger-activated');
-                if (tigerDangerSquares.has(key))   square.classList.add('tiger-danger');
-                if (waterCrippleSquares.has(key))  square.classList.add('water-effect-active');
-                if (templeHaloSquares.has(key))    square.classList.add('temple-protected');
+                if (tigerHaloSquares.has(key))        square.classList.add('tiger-activated');
+                if (whiteTigerDangerSquares.has(key)) square.classList.add('tiger-danger', 'tiger-danger-white');
+                if (blackTigerDangerSquares.has(key)) square.classList.add('tiger-danger', 'tiger-danger-black');
+                if (waterCrippleSquares.has(key))     square.classList.add('water-effect-active');
+                if (templeHaloSquares.has(key))       square.classList.add('temple-protected');
 
                 square.dataset.row = r;
                 square.dataset.col = c;
@@ -558,19 +563,17 @@ class ChessGame {
     }
 
     // ═══════════════════════════════════════════════════════
-    // ★ TIGER — REWRITTEN
+    // ★ TIGER
     //   1. Travelling: moves ONLY forward (toward its forest), exactly 2 squares
-    //      (skipping 1). Cannot capture. Cannot move backward.
-    //   2. On its own forest: invulnerable, can hunt 1 adjacent enemy once.
-    //   3. After hunt: spent (stationary forever), capturable.
-    //   4. Special: enemy sitting on its designated forest can be struck
-    //      from a distance of 2.
+    //   2. On its own forest: invulnerable, can hunt 1 adjacent enemy once
+    //   3. After hunt: spent forever, capturable
+    //   4. Temple hunt allowed — filterLegalMoves enforces combined-attack
     // ═══════════════════════════════════════════════════════
     getTigerMoves(r, c, piece) {
         const moves = [];
         const forest = piece.designatedForest;
         if (!forest) return moves;
-        if (piece.tigerStationary) return moves;   // spent
+        if (piece.tigerStationary) return moves;
 
         const onOwnForest = (r === forest.r && c === forest.c);
 
@@ -583,7 +586,7 @@ class ChessGame {
                 const target = this.board[nr][nc];
                 if (target && target.color !== piece.color &&
                     target.type !== 'king' && target.type !== 'tiger') {
-                    if (this.terrain[nr][nc] === 'temple') continue;
+                    // ★ REMOVED temple skip — filterLegalMoves will check combined attackers
                     moves.push({ toRow: nr, toCol: nc, isCapture: true, isTigerHunt: true });
                 }
             }
@@ -596,7 +599,7 @@ class ChessGame {
         else if (forest.r < r) dr = -1;
         else if (forest.c > c) dc = 1;
         else if (forest.c < c) dc = -1;
-        else return moves; // already on forest (handled above)
+        else return moves;
 
         const stepR = r + dr * 2;
         const stepC = c + dc * 2;
@@ -605,24 +608,18 @@ class ChessGame {
             const isTargetMyForest = (stepR === forest.r && stepC === forest.c);
 
             if (!target) {
-                // Normal jump — empty landing
                 moves.push({ toRow: stepR, toCol: stepC, isCapture: false, isTigerJump: true });
             } else if (isTargetMyForest &&
                        target.color !== piece.color &&
                        target.type !== 'king' && target.type !== 'tiger') {
-                // Special: enemy is sitting on my designated forest — strike it
-                if (this.terrain[stepR][stepC] !== 'temple') {
-                    moves.push({
-                        toRow: stepR, toCol: stepC,
-                        isCapture: true, isTigerJump: true,
-                        isTigerForestStrike: true
-                    });
-                }
+                moves.push({
+                    toRow: stepR, toCol: stepC,
+                    isCapture: true, isTigerJump: true,
+                    isTigerForestStrike: true
+                });
             }
-            // else: landing occupied and not our forest → blocked, no move
         }
 
-        // Deduplicate
         const seen = new Set();
         return moves.filter(m => {
             const k = `${m.toRow},${m.toCol}`;
@@ -633,13 +630,7 @@ class ChessGame {
     }
 
     // ═══════════════════════════════════════════════════════
-    // ★ ROOSTER — REWRITTEN
-    //   - Default: 2-square diagonal leap (skips 1)
-    //   - Crippled: while on water OR if last leap skipped water
-    //     → 1-square diagonal, no forward capture that turn
-    //   - Bound: cannot pass opponent pawn start row
-    //   - Can jump over any piece (own or enemy)
-    //   - Can check the King (via forward capture)
+    // ★ ROOSTER
     // ═══════════════════════════════════════════════════════
     getRoosterMoves(r, c, piece) {
         const moves = [];
@@ -649,7 +640,6 @@ class ChessGame {
         const dist = crippled ? 1 : 2;
         const boundaryRow = piece.color === 'white' ? 10 : 1;
 
-        // Diagonal leap(s) — forward only
         for (const dcDir of [-1, 1]) {
             const nr = r + dir * dist;
             const nc = c + dcDir * dist;
@@ -667,7 +657,6 @@ class ChessGame {
             }
         }
 
-        // Forward capture (1 square) — disabled while crippled
         if (!crippled) {
             const capR = r + dir, capC = c;
             if (this.isInBounds(capR, capC)) {
@@ -710,10 +699,9 @@ class ChessGame {
                     if (target.type === 'tiger') {
                         const tf = target.designatedForest;
                         const onOwnForest = tf && tf.r === move.toRow && tf.c === move.toCol;
-                        // Invulnerable only while ACTIVE and on its own forest
                         if (onOwnForest && !target.tigerStationary) continue;
                     }
-                    // ★ Temple protection — broken only by a combined attack (2+ attackers)
+                    // ★ Temple protection — broken ONLY by 2+ attackers
                     if (this.terrain[move.toRow][move.toCol] === 'temple') {
                         const attackers = this.countAttackers(move.toRow, move.toCol, color);
                         if (attackers < 2) continue;
@@ -732,12 +720,27 @@ class ChessGame {
     }
 
     // ★ Count pieces of `byColor` that can currently attack (r,c)
+    //   Includes activated Tigers (Chebyshev distance 1 from their forest)
     countAttackers(r, c, byColor) {
         let count = 0;
+        const target = this.board[r][c];
         for (let rr = 0; rr < BOARD_SIZE; rr++) {
             for (let cc = 0; cc < BOARD_SIZE; cc++) {
                 const p = this.board[rr][cc];
-                if (p && p.color === byColor && p.type !== 'tiger') {
+                if (!p || p.color !== byColor) continue;
+
+                if (p.type === 'tiger') {
+                    // Tiger only counts as an attacker if it's activated on its own forest
+                    const df = p.designatedForest;
+                    const onOwnForest = df && df.r === rr && df.c === cc && !p.tigerStationary;
+                    if (!onOwnForest) continue;
+                    // Cannot attack king or other tigers
+                    if (target && (target.type === 'king' || target.type === 'tiger')) continue;
+                    // Tiger hunts 1 square in any direction (Chebyshev distance 1)
+                    if (Math.abs(rr - r) <= 1 && Math.abs(cc - c) <= 1 && (rr !== r || cc !== c)) {
+                        count++;
+                    }
+                } else {
                     if (this.canPieceAttack(rr, cc, r, c)) count++;
                 }
             }
@@ -801,7 +804,6 @@ class ChessGame {
                 const rdir = piece.color === 'white' ? 1 : -1;
                 return dr === rdir && dc === 0;
             }
-            // ★ Tiger does NOT attack/check the king
             default: return false;
         }
     }
@@ -877,7 +879,6 @@ class ChessGame {
         const piece = this.board[fromR][fromC];
         this.redoStack = [];
 
-        // ★ Rooster — did the leap skip over water?
         let roosterSkippedWater = false;
         if (piece.type === 'rooster' && move.midR !== undefined) {
             if (this.terrain[move.midR] && this.terrain[move.midR][move.midC] === 'water') {
@@ -899,7 +900,6 @@ class ChessGame {
             if (target) this.handleCapture(target);
         }
 
-        // ★ Tiger: after hunting, becomes stationary forever
         if (move.isTigerHunt || move.isTigerForestStrike) {
             piece.tigerStationary = true;
             piece.forestBuff = false;
@@ -924,7 +924,6 @@ class ChessGame {
 
         const landedPiece = this.board[move.toRow][move.toCol];
         if (landedPiece) {
-            // Tiger forest buff (visual only)
             if (landedPiece.type === 'tiger' && this.terrain[move.toRow][move.toCol] === 'forest') {
                 if (landedPiece.designatedForest &&
                     landedPiece.designatedForest.r === move.toRow &&
@@ -933,7 +932,6 @@ class ChessGame {
                 }
             }
 
-            // ★ Rooster water cripple — recalculated each move
             if (landedPiece.type === 'rooster') {
                 const landedOnWater = this.terrain[move.toRow][move.toCol] === 'water';
                 if (landedOnWater || roosterSkippedWater) {
@@ -943,7 +941,6 @@ class ChessGame {
                 }
             }
 
-            // Temple protection
             if (this.terrain[move.toRow][move.toCol] === 'temple') {
                 landedPiece.isProtected = true;
             } else {
@@ -1150,7 +1147,7 @@ class ChessGame {
 }
 
 // ═══════════════════════════════════════════════════════
-// ONLINE MANAGER (unchanged)
+// ONLINE MANAGER
 // ═══════════════════════════════════════════════════════
 class OnlineManager {
     constructor(game) {
@@ -1306,16 +1303,31 @@ class OnlineManager {
         });
     }
 
+    // ★ Bigger, more square QR code that fills its container
     generateQR(code) {
         const canvas = document.getElementById('qr-code');
         if (!canvas || typeof QRious === 'undefined') return;
         const baseUrl = window.location.origin + window.location.pathname;
         const joinUrl = `${baseUrl}?join=${code}`;
+
+        // Detect the intended render size (square). Fallback to 160.
+        const renderSize = 160;
+
         new QRious({
-            element: canvas, value: joinUrl, size: 140,
-            background: '#ffffff', foreground: '#1c1b19',
-            level: 'M', padding: 8
+            element: canvas,
+            value: joinUrl,
+            size: renderSize,
+            background: '#ffffff',
+            foreground: '#1c1b19',
+            level: 'M',
+            padding: 4
         });
+
+        // Force canvas CSS to match exactly (no more left drift)
+        canvas.style.width  = renderSize + 'px';
+        canvas.style.height = renderSize + 'px';
+        canvas.style.display = 'block';
+        canvas.style.margin = '0 auto';
     }
 
     setupConnection() {
@@ -1352,7 +1364,7 @@ class OnlineManager {
 }
 
 // ═══════════════════════════════════════════════════════
-// HELPERS (unchanged)
+// HELPERS
 // ═══════════════════════════════════════════════════════
 function spawnBalloonEmoji(emoji) {
     const board = document.querySelector('.board-wrapper');
@@ -1368,7 +1380,7 @@ function spawnBalloonEmoji(emoji) {
 }
 
 // ═══════════════════════════════════════════════════════
-// INITIALIZATION (unchanged)
+// INITIALIZATION
 // ═══════════════════════════════════════════════════════
 const game = new ChessGame();
 const online = new OnlineManager(game);
