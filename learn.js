@@ -14,18 +14,18 @@ const ROWS = [12,11,10,9,8,7,6,5,4,3,2,1]; // display: top → bottom
 const BOARD_SIZE = 12;
 const BOARD_OFFSET = 2; // lessons defined on 8×8, shifted to 12×12
 
-// ★ NEW: Permanent terrain layout (12×12 absolute, never changes)
+// ★ Permanent terrain layout (12×12 absolute, never changes)
 const PERMANENT_TERRAIN = [
     { r: 4, c: 2,  type: 'water'  }, // c5  — river
     { r: 4, c: 4,  type: 'forest' }, // e5  — white tiger 1 forest
     { r: 6, c: 3,  type: 'temple' }, // d7
     { r: 7, c: 2,  type: 'water'  }, // c8
     { r: 7, c: 4,  type: 'forest' }, // e8  — black tiger 1 forest
-    { r: 4, c: 7,  type: 'forest' }, // h5  — white tiger 2 forest  ★ shifted
-    { r: 5, c: 8,  type: 'temple' }, // i6  — temple  ★ shifted
-    { r: 4, c: 9,  type: 'water'  }, // j5  — water  ★ shifted
-    { r: 7, c: 7,  type: 'forest' }, // h8  — black tiger 2 forest  ★ shifted
-    { r: 7, c: 9,  type: 'water'  }  // j8  — water  ★ shifted
+    { r: 4, c: 7,  type: 'forest' }, // h5  — white tiger 2 forest
+    { r: 5, c: 8,  type: 'temple' }, // i6  — temple
+    { r: 4, c: 9,  type: 'water'  }, // j5  — water
+    { r: 7, c: 7,  type: 'forest' }, // h8  — black tiger 2 forest
+    { r: 7, c: 9,  type: 'water'  }  // j8  — water
 ];
 const TERRAIN_MAP = {};
 PERMANENT_TERRAIN.forEach(t => { TERRAIN_MAP[`${t.r},${t.c}`] = t.type; });
@@ -375,34 +375,28 @@ const LESSONS = {
         next: 'tiger'
     },
 
-    // ═══════════ TIGER ═══════════
+    // ═══════════ TIGER — UPDATED FOR NEW RULES ═══════════
     tiger: {
         icon: '🐅',
         title: 'The Tiger — The Hunter',
         subtitle: 'Travel vulnerable. Hunt invulnerable. Then freeze forever.',
-        intro: 'The Tiger is a one-shot hunter. It is VULNERABLE while travelling to its designated forest. On its own forest it becomes INVULNERABLE and can hunt ONE target. After hunting it lands on the captured square, becomes frozen forever, and is vulnerable again.',
+        intro: 'The Tiger is a one-shot hunter. It travels to its designated forest by 2-square jumps in a straight line toward the forest — it CANNOT capture, sidestep, or move backward while travelling. On its own forest it becomes INVULNERABLE and can hunt ONE adjacent target (King and Tigers are immune). After hunting, it lands on the captured square, freezes forever, and becomes vulnerable again.',
         steps: [
             {
-                title: 'The journey — vulnerable while exposed',
-                text: 'Your Tiger starts away from its designated forest at e5. While travelling it can only move 1 square in any direction, or jump 2 squares vertically (passing over its own pieces). Reach the forest — you are NOT yet safe.',
+                title: 'The journey — one leap forward, no capture',
+                text: 'Your Tiger travels toward its designated forest by 2-square jumps in the same line. It CANNOT capture, cannot sidestep, and cannot move backward. The landing square must be empty. Click the highlighted jump.',
                 setup: [
-                    { piece: 'tiger', color: 'white', r: 4, c: 4, designatedForest: { r: 2, c: 2 } },
-                    { piece: 'pawn', color: 'black', r: 3, c: 3 }
+                    { piece: 'tiger', color: 'white', r: 4, c: 4, designatedForest: { r: 0, c: 4 } }
                 ],
                 source: { r: 4, c: 4 },
                 highlights: [
-                    { r: 3, c: 3, type: 'capture' },
-                    { r: 3, c: 4, type: 'move' }, { r: 3, c: 5, type: 'move' },
-                    { r: 4, c: 3, type: 'move' }, { r: 4, c: 5, type: 'move' },
-                    { r: 5, c: 3, type: 'move' }, { r: 5, c: 4, type: 'move' }, { r: 5, c: 5, type: 'move' },
-                    { r: 2, c: 4, type: 'move' },  // 2-square vertical jump
-                    { r: 6, c: 4, type: 'move' }
+                    { r: 2, c: 4, type: 'move' }
                 ],
-                expectedMove: { from: { r: 4, c: 4 }, to: { r: 3, c: 4 } }
+                expectedMove: { from: { r: 4, c: 4 }, to: { r: 2, c: 4 } }
             },
             {
                 title: 'On its own forest — invulnerable + hunting ready',
-                text: 'Now the Tiger sits on its designated forest (e5). Here it is INVULNERABLE — no piece can capture it. It can also hunt ONE adjacent enemy (8 surrounding squares). The King and other Tigers are immune. Capture the knight!',
+                text: 'Now the Tiger sits on its designated forest. Here it is INVULNERABLE — no piece can capture it while it is activated. It can also hunt ONE adjacent enemy (8 surrounding squares). The King and other Tigers are immune. Capture the knight!',
                 setup: [
                     { piece: 'tiger', color: 'white', r: 2, c: 2, designatedForest: { r: 2, c: 2 } },
                     { piece: 'knight', color: 'black', r: 1, c: 3 }
@@ -423,8 +417,8 @@ const LESSONS = {
         ],
         sandbox: {
             pieces: [
-                { piece: 'tiger', color: 'white', r: 5, c: 5, designatedForest: { r: 2, c: 2 } },
-                { piece: 'pawn', color: 'black', r: 3, c: 3 },
+                { piece: 'tiger', color: 'white', r: 5, c: 5, designatedForest: { r: 2, c: 5 } },
+                { piece: 'pawn', color: 'black', r: 3, c: 5 },
                 { piece: 'king', color: 'black', r: 0, c: 4 }
             ]
         },
@@ -436,7 +430,7 @@ const LESSONS = {
         icon: '🐓',
         title: 'The Rooster — The Sentinel',
         subtitle: 'Leap 2 diagonal. Capture forward. Bounded by enemy pawns. Crippled by water.',
-        intro: 'The Rooster leaps 2 squares diagonally forward, then captures 1 square straight ahead. It CANNOT move past the opponent\'s pawn row. Water — landing on it OR leaping over it — permanently halves its leap to 1 square.',
+        intro: 'The Rooster leaps 2 squares diagonally forward, then captures 1 square straight ahead. It CANNOT move past the opponent\'s pawn row. Water — landing on it OR leaping over it — permanently halves its leap to 1 square until it steps off.',
         steps: [
             {
                 title: 'The diagonal leap',
@@ -464,17 +458,16 @@ const LESSONS = {
                 expectedMove: { from: { r: 4, c: 2 }, to: { r: 2, c: 4 } }
             },
             {
-                title: 'Water cripples permanently — even by leaping over it',
-                text: 'Landing on water permanently halves your leap to 1 square. Leaping OVER water does the same. Try landing on the water at c8.',
+                title: 'Water cripples until the Rooster steps off',
+                text: 'Landing on water halves your leap to 1 square, and so does leaping OVER water. But unlike before — the cripple is temporary! As soon as the Rooster steps onto a non-water square, its full leap is restored. Try landing on the water at c5.',
                 setup: [
-                    { piece: 'rooster', color: 'white', r: 3, c: 2 }
+                    { piece: 'rooster', color: 'white', r: 0, c: 2 }
                 ],
-                source: { r: 3, c: 2 },
+                source: { r: 0, c: 2 },
                 highlights: [
-                    { r: 5, c: 0, type: 'target' }, // → c8 (water)
-                    { r: 5, c: 4, type: 'move' }
+                    { r: 2, c: 0, type: 'target' }
                 ],
-                expectedMove: { from: { r: 3, c: 2 }, to: { r: 5, c: 0 } }
+                expectedMove: { from: { r: 0, c: 2 }, to: { r: 2, c: 0 } }
             }
         ],
         sandbox: {
@@ -524,34 +517,34 @@ const LESSONS = {
         next: 'water'
     },
 
-        // ═══════════ WATER ═══════════
+    // ═══════════ WATER ═══════════
     water: {
         icon: '🌊',
         title: 'Water Squares',
-        subtitle: 'Permanently cripples Roosters.',
-        intro: 'Four Water squares are fixed on the board: c5, j5 (rank 5), c8, j8 (rank 8). Roosters are the only piece affected — once crippled, their leap is permanently halved to 1 square.',
+        subtitle: 'Temporarily cripples Roosters until they step off.',
+        intro: 'Four Water squares are fixed on the board: c5, j5 (rank 5), c8, j8 (rank 8). Roosters are the only piece affected — while crippled, their leap is halved to 1 square and they cannot strike forward. Once they move off the water, their full leap returns.',
         steps: [
             {
                 title: 'Landing on water',
-                text: 'A Rooster that lands directly on water loses full flight power for the rest of the game. Its leap becomes 1 square instead of 2. Land on the water at c5.',
+                text: 'A Rooster that lands on water loses its full leap until it leaves. Its leap becomes 1 square and it cannot capture forward this turn. Land on the water at c5.',
                 setup: [
                     { piece: 'rooster', color: 'white', r: 0, c: 2 }
                 ],
                 source: { r: 0, c: 2 },
                 highlights: [
-                    { r: 2, c: 0, type: 'move' } // → lands on c5 water (expanded: (2,4) → (4,2))
+                    { r: 2, c: 0, type: 'move' }
                 ],
                 expectedMove: { from: { r: 0, c: 2 }, to: { r: 2, c: 0 } }
             },
             {
                 title: 'Leaping OVER water also cripples',
-                text: 'Even leaping over a water square without landing on it is enough to permanently cripple the Rooster. Leap over the water at j5. The 💧 badge shows the cripple.',
+                text: 'Even leaping over a water square without landing on it is enough to cripple the Rooster for that turn. The 💧 badge shows the cripple.',
                 setup: [
                     { piece: 'rooster', color: 'white', r: 1, c: 6 }
                 ],
                 source: { r: 1, c: 6 },
                 highlights: [
-                    { r: 3, c: 8, type: 'target' } // mid = j5 water (expanded: (3,8) → (5,10), mid (4,9))
+                    { r: 3, c: 8, type: 'target' }
                 ],
                 expectedMove: { from: { r: 1, c: 6 }, to: { r: 3, c: 8 } }
             }
@@ -569,12 +562,12 @@ const LESSONS = {
     temple: {
         icon: '🛕',
         title: 'Temple (Safe Zone)',
-        subtitle: 'Permanent invulnerability while standing on it.',
-        intro: 'Two Temples are fixed on the board at d7 and i6. Any piece — of either color — standing on a Temple is invulnerable to capture. This protection is PERMANENT while the piece remains there.',
+        subtitle: 'Protected from a single attacker. The King can never enter.',
+        intro: 'Two Temples are fixed on the board at d7 and i6. A piece on a Temple is protected from a SINGLE attack — but if two or more enemies attack the same Temple piece on the same turn, the protection breaks. The King can NEVER enter a Temple.',
         steps: [
             {
                 title: 'Protected while standing on the Temple',
-                text: 'A piece on a Temple square is invulnerable. No enemy can capture it — no matter the angle or power. Look at the shield badge on the piece.',
+                text: 'A piece on a Temple square is shielded from any single attacker — a lone rook, bishop, queen, or knight cannot take it. Look at the shield badge on the piece.',
                 setup: [
                     { piece: 'bishop', color: 'white', r: 2, c: 2 },
                     { piece: 'rook', color: 'black', r: 6, c: 2 }
@@ -582,14 +575,30 @@ const LESSONS = {
                 source: { r: 2, c: 2 }
             },
             {
-                title: 'Protection disappears when moving off',
-                text: 'The moment the piece steps off the Temple, the shield is gone. The black rook can now capture it.',
+                title: 'Protection breaks under a double attack',
+                text: 'If TWO or more enemies can attack the same Temple piece, the protection fails. In the game engine the count is automatic — you just have to line up a second attacker.',
                 setup: [
-                    { piece: 'bishop', color: 'white', r: 1, c: 1 },
-                    { piece: 'rook', color: 'black', r: 4, c: 1 }
+                    { piece: 'knight', color: 'white', r: 3, c: 3 },
+                    { piece: 'rook', color: 'black', r: 6, c: 3 },
+                    { piece: 'bishop', color: 'black', r: 0, c: 6 }
+                ],
+                source: { r: 3, c: 3 },
+                highlights: []
+            },
+            {
+                title: 'The King is banned from Temples',
+                text: 'Unlike every other piece, the King cannot take refuge in a Temple. Even though it looks safe, the King is not allowed to step onto a Temple square.',
+                setup: [
+                    { piece: 'king', color: 'white', r: 4, c: 1 },
+                    { piece: 'rook', color: 'black', r: 0, c: 4 }
                 ],
                 source: { r: 4, c: 1 },
-                highlights: [{ r: 1, c: 1, type: 'capture' }]
+                highlights: [
+                    { r: 3, c: 1, type: 'move' },
+                    { r: 5, c: 1, type: 'move' },
+                    { r: 4, c: 0, type: 'move' },
+                    { r: 4, c: 2, type: 'move' }
+                ]
             }
         ],
         sandbox: {
@@ -828,7 +837,6 @@ class DemoBoard {
         this.onCorrectMove = null;
         this.onWrongMove = null;
 
-        // Init state arrays
         for (let r = 0; r < this.size; r++) {
             this.state[r] = [];
             this.cells[r] = [];
@@ -837,8 +845,6 @@ class DemoBoard {
             }
         }
 
-        // ★ Create cells in VISUAL order: r=11 (rank 12) at top → r=0 (rank 1) at bottom
-        // This aligns the board with the ROWS label array [12..1] top-to-bottom.
         for (let r = this.size - 1; r >= 0; r--) {
             for (let c = 0; c < this.size; c++) {
                 const sq = document.createElement('div');
@@ -863,7 +869,6 @@ class DemoBoard {
         this.render();
     }
 
-    // ★ Permanent terrain is now the ONLY source of terrain
     getTerrainAt(r, c) {
         return TERRAIN_MAP[`${r},${c}`] || null;
     }
@@ -893,7 +898,6 @@ class DemoBoard {
                 cell.innerHTML = '';
                 cell.className = 'square ' + ((r + c) % 2 === 0 ? 'dark' : 'light');
 
-                // ★ Permanent terrain — always applied
                 const terrain = this.getTerrainAt(r, c);
                 if (terrain === 'forest') {
                     cell.classList.add('terrain-designated-forest');
@@ -905,7 +909,6 @@ class DemoBoard {
 
                 const s = this.state[r][c];
                 if (s) {
-                    // Glow for compatible piece on its active terrain
                     if (terrain) {
                         const isTigerOnForest = s.piece === 'tiger' && terrain === 'forest';
                         const isRoosterOnWater = s.piece === 'rooster' && terrain === 'water';
@@ -930,7 +933,6 @@ class DemoBoard {
                     };
                     pieceEl.appendChild(img);
 
-                    // Badges
                     if (terrain === 'temple') pieceEl.classList.add('protected');
                     if (s.piece === 'tiger' && terrain === 'forest') pieceEl.classList.add('buffed');
                     if (s.piece === 'rooster' && terrain === 'water') pieceEl.classList.add('debuffed');
@@ -1033,7 +1035,7 @@ class DemoBoard {
     }
 
     // ═══════════════════════════════════════════════════════
-    // SANDBOX (free play) — updated for new rules
+    // SANDBOX (free play) — updated for new rules + tiger
     // ═══════════════════════════════════════════════════════
     handleSandboxClick(r, c) {
         const s = this.state[r][c];
@@ -1054,7 +1056,7 @@ class DemoBoard {
                 return;
             }
 
-            if (s && s.color === 'white' && !['forest','water','temple'].includes(s.piece)) {
+            if (s && s.color === 'white') {
                 this.selected = { r, c };
                 this.clearHighlights();
                 this.cells[r][c].classList.add('selected');
@@ -1067,7 +1069,7 @@ class DemoBoard {
                 this.clearHighlights();
             }
         } else {
-            if (s && s.color === 'white' && !['forest','water','temple'].includes(s.piece)) {
+            if (s && s.color === 'white') {
                 this.selected = { r, c };
                 this.cells[r][c].classList.add('selected');
                 const moves = this.sandboxLegalMoves(r, c);
@@ -1084,12 +1086,9 @@ class DemoBoard {
         const moves = [];
         const N = this.size;
 
-        // ★ Rooster crippled? Standing on water = crippled.
         const isRoosterCrippled = (piece, row, col) => {
             return piece.piece === 'rooster' && this.getTerrainAt(row, col) === 'water';
         };
-
-        // ★ Tiger on its own forest? (simplified: on any forest)
         const isTigerOnForest = (piece, row, col) => {
             return piece.piece === 'tiger' && this.getTerrainAt(row, col) === 'forest';
         };
@@ -1101,7 +1100,7 @@ class DemoBoard {
                 moves.push({ r: nr, c: nc, capture: false });
                 return true;
             }
-            if (target.color !== s.color && !['forest','water','temple'].includes(target.piece)) {
+            if (target.color !== s.color) {
                 moves.push({ r: nr, c: nc, capture: true });
             }
             return false;
@@ -1119,10 +1118,10 @@ class DemoBoard {
                 [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]].forEach(([dr, dc]) => {
                     const nr = r + dr, nc = c + dc;
                     if (nr < 0 || nr >= N || nc < 0 || nc >= N) return;
+                    if (this.getTerrainAt(nr, nc) === 'temple') return;
                     const t = this.state[nr][nc];
                     if (!t) moves.push({ r: nr, c: nc, capture: false });
-                    else if (t.color !== s.color && !['forest','water','temple'].includes(t.piece))
-                        moves.push({ r: nr, c: nc, capture: true });
+                    else if (t.color !== s.color) moves.push({ r: nr, c: nc, capture: true });
                 });
                 break;
             case 'queen': sliding([[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]); break;
@@ -1134,8 +1133,7 @@ class DemoBoard {
                     if (nr < 0 || nr >= N || nc < 0 || nc >= N) return;
                     const t = this.state[nr][nc];
                     if (!t) moves.push({ r: nr, c: nc, capture: false });
-                    else if (t.color !== s.color && !['forest','water','temple'].includes(t.piece))
-                        moves.push({ r: nr, c: nc, capture: true });
+                    else if (t.color !== s.color) moves.push({ r: nr, c: nc, capture: true });
                 });
                 break;
             case 'pawn': {
@@ -1153,21 +1151,18 @@ class DemoBoard {
                     const nc = c + dc;
                     if (nr < 0 || nr >= N || nc < 0 || nc >= N) return;
                     const t = this.state[nr][nc];
-                    if (t && t.color !== s.color && !['forest','water','temple'].includes(t.piece)) {
+                    if (t && t.color !== s.color) {
                         moves.push({ r: nr, c: nc, capture: true });
                     }
                 });
                 break;
             }
-                        case 'rooster': {
-                const dir = s.color === 'white' ? 1 : -1; // white moves up visually = increasing r
+            case 'rooster': {
+                const dir = s.color === 'white' ? 1 : -1;
                 const crippled = isRoosterCrippled(s, r, c);
                 const step = crippled ? 1 : 2;
-                // Boundary: can't move past enemy pawn row.
-                // White can't go above row 10 (rank 11); Black can't go below row 1 (rank 2).
                 const boundary = s.color === 'white' ? 10 : 1;
 
-                // 2 (or 1) diagonal leaps
                 [-1, 1].forEach(dc => {
                     const nr = r + step * dir, nc = c + step * dc;
                     if (nr < 0 || nr >= N || nc < 0 || nc >= N) return;
@@ -1176,16 +1171,49 @@ class DemoBoard {
                     if (!this.state[nr][nc]) moves.push({ r: nr, c: nc, capture: false });
                 });
 
-                // Forward capture (1 square)
-                const capR = r + dir;
-                if (capR >= 0 && capR < N) {
-                    const ok = (s.color === 'white' && capR <= boundary) ||
-                               (s.color === 'black' && capR >= boundary);
-                    if (ok) {
-                        const t = this.state[capR][c];
-                        if (t && t.color !== s.color && !['forest','water','temple','king','tiger'].includes(t.piece)) {
-                            moves.push({ r: capR, c, capture: true });
+                if (!crippled) {
+                    const capR = r + dir;
+                    if (capR >= 0 && capR < N) {
+                        const ok = (s.color === 'white' && capR <= boundary) ||
+                                   (s.color === 'black' && capR >= boundary);
+                        if (ok) {
+                            const t = this.state[capR][c];
+                            if (t && t.color !== s.color && t.piece !== 'tiger') {
+                                moves.push({ r: capR, c, capture: true });
+                            }
                         }
+                    }
+                }
+                break;
+            }
+            case 'tiger': {
+                if (s.tigerStationary) break;
+                const forest = s.designatedForest;
+                if (!forest) break;
+                const onOwnForest = (r === forest.r && c === forest.c);
+
+                if (onOwnForest) {
+                    // Hunt: 8 adjacent enemies (King & Tiger immune)
+                    [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]].forEach(([dr, dc]) => {
+                        const nr = r + dr, nc = c + dc;
+                        if (nr < 0 || nr >= N || nc < 0 || nc >= N) return;
+                        const t = this.state[nr][nc];
+                        if (t && t.color !== s.color && t.piece !== 'king' && t.piece !== 'tiger') {
+                            moves.push({ r: nr, c: nc, capture: true });
+                        }
+                    });
+                } else {
+                    // Travel: exactly 2 squares in a straight line toward the forest
+                    let dr = 0, dc = 0;
+                    if (forest.r > r) dr = 1;
+                    else if (forest.r < r) dr = -1;
+                    else if (forest.c > c) dc = 1;
+                    else if (forest.c < c) dc = -1;
+
+                    const nr = r + dr * 2, nc = c + dc * 2;
+                    if (nr >= 0 && nr < N && nc >= 0 && nc < N) {
+                        const t = this.state[nr][nc];
+                        if (!t) moves.push({ r: nr, c: nc, capture: false });
                     }
                 }
                 break;
