@@ -632,24 +632,70 @@ class ChessGame {
     // ═══════════════════════════════════════════════════════
     // ★ ROOSTER
     // ═══════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════
+    // ★ ROOSTER — COMBINED LEAP + FORWARD CAPTURE
+    //   1. Rooster leaps 2 squares diagonally forward (1 if crippled).
+    //   2. The landing square must be EMPTY.
+    //   3. After landing, if an enemy is directly ahead (1 square forward
+    //      from the landing square) and not a King/Tiger/temple-protected,
+    //      the rooster is FORCED to capture it and ends up on that square.
+    //   4. Otherwise the rooster just lands on the diagonal square.
+    //   5. Water cripples the rooster for the rest of the turn (until it
+    //      steps off onto a non-water square).
+    // ═══════════════════════════════════════════════════════
     getRoosterMoves(r, c, piece) {
         const moves = [];
         const dir = piece.color === 'white' ? 1 : -1;
         const onWater = this.terrain[r][c] === 'water';
         const crippled = onWater || piece.waterCrippled;
-        const dist = crippled ? 1 : 2;
+        const leapDist = crippled ? 1 : 2;
         const boundaryRow = piece.color === 'white' ? 10 : 1;
 
         for (const dcDir of [-1, 1]) {
-            const nr = r + dir * dist;
-            const nc = c + dcDir * dist;
-            if (!this.isInBounds(nr, nc)) continue;
-            if (piece.color === 'white' && nr > boundaryRow) continue;
-            if (piece.color === 'black' && nr < boundaryRow) continue;
+            const landR = r + dir * leapDist;
+            const landC = c + dcDir * leapDist;
 
-            if (!this.board[nr][nc]) {
-                const m = { toRow: nr, toCol: nc, isCapture: false };
-                if (dist === 2) {
+            if (!this.isInBounds(landR, landC)) continue;
+            if (piece.color === 'white' && landR > boundaryRow) continue;
+            if (piece.color === 'black' && landR < boundaryRow) continue;
+            // Landing square must be empty
+            if (this.board[landR][landC]) continue;
+
+            // Try the combined leap + forward capture
+            const capR = landR + dir;
+            const capC = landC;   // straight ahead of the landing square
+
+            let pushedCombined = false;
+            if (this.isInBounds(capR, capC)) {
+                const capAllowed =
+                    (piece.color === 'white' && capR <= boundaryRow) ||
+                    (piece.color === 'black' && capR >= boundaryRow);
+
+                if (capAllowed) {
+                    const capTarget = this.board[capR][capC];
+                    if (capTarget &&
+                        capTarget.color !== piece.color &&
+                        capTarget.type !== 'tiger' &&
+                        this.terrain[capR][capC] !== 'temple') {
+                        // Forced combined leap-capture: skip the mid + landing, end on capTarget
+                        moves.push({
+                            toRow: capR, toCol: capC,
+                            isCapture: true,
+                            isRoosterCombined: true,
+                            midR: r + dir,       // mid square of the leap (skip-1)
+                            midC: c + dcDir,
+                            landR: landR,        // leap landing (also skipped)
+                            landC: landC
+                        });
+                        pushedCombined = true;
+                    }
+                }
+            }
+
+            if (!pushedCombined) {
+                // Simple leap: land on the diagonal square
+                const m = { toRow: landR, toCol: landC, isCapture: false };
+                if (leapDist === 2) {
                     m.midR = r + dir;
                     m.midC = c + dcDir;
                 }
@@ -657,26 +703,9 @@ class ChessGame {
             }
         }
 
-        if (!crippled) {
-            const capR = r + dir, capC = c;
-            if (this.isInBounds(capR, capC)) {
-                let allowed = true;
-                if (piece.color === 'white' && capR > boundaryRow) allowed = false;
-                if (piece.color === 'black' && capR < boundaryRow) allowed = false;
-
-                if (allowed) {
-                    const target = this.board[capR][capC];
-                    if (target && target.color !== piece.color && target.type !== 'tiger') {
-                        if (this.terrain[capR][capC] !== 'temple') {
-                            moves.push({ toRow: capR, toCol: capC, isCapture: true });
-                        }
-                    }
-                }
-            }
-        }
-
         return moves;
     }
+
 
     // ═══════════════════════════════════════════════════════
     // ★ FILTER — temple combined-attack + king-temple ban
@@ -879,9 +908,16 @@ class ChessGame {
         const piece = this.board[fromR][fromC];
         this.redoStack = [];
 
+                // ★ Rooster: check both the leap mid-square AND (for combined moves)
+        //   the intermediate leap landing square for water.
         let roosterSkippedWater = false;
-        if (piece.type === 'rooster' && move.midR !== undefined) {
-            if (this.terrain[move.midR] && this.terrain[move.midR][move.midC] === 'water') {
+        if (piece.type === 'rooster') {
+            if (move.midR !== undefined &&
+                this.terrain[move.midR] && this.terrain[move.midR][move.midC] === 'water') {
+                roosterSkippedWater = true;
+            }
+            if (move.landR !== undefined &&
+                this.terrain[move.landR] && this.terrain[move.landR][move.landC] === 'water') {
                 roosterSkippedWater = true;
             }
         }
