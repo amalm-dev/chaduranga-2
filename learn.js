@@ -489,29 +489,29 @@ const LESSONS = {
         steps: [
             {
                 title: 'The designated forest',
-                text: 'Every Tiger has its own forest — e5 for the first White Tiger (left of the king), h5 for the second. The star (★) marks each forest.',
+                text: 'Every Tiger has its own forest — e5 for the first White Tiger (left of the king), h5 for the second. The star (★) and the golden halo mark a Tiger that has reached its own forest.',
                 setup: [
-                    { piece: 'tiger', color: 'white', r: 5, c: 5, designatedForest: { r: 2, c: 2 } }
+                    { piece: 'tiger', color: 'white', r: 2, c: 2, designatedForest: { r: 2, c: 2 } }
                 ],
-                source: { r: 5, c: 5 },
-                highlights: [{ r: 2, c: 2, type: 'target' }]
+                source: { r: 2, c: 2 }
             },
             {
                 title: 'Forest = invulnerability + hunt',
-                text: 'On its own forest, the Tiger is invulnerable. No piece can capture it while it sits there. It can hunt one adjacent enemy in the same turn.',
+                text: 'On its own forest, the Tiger is invulnerable — no piece can capture it while it sits there. It can also hunt one adjacent enemy in the same turn. Capture the pawn!',
                 setup: [
                     { piece: 'tiger', color: 'white', r: 2, c: 2, designatedForest: { r: 2, c: 2 } },
-                    { piece: 'pawn', color: 'black', r: 1, c: 3 }
+                    { piece: 'pawn',  color: 'black', r: 1, c: 3 }
                 ],
                 source: { r: 2, c: 2 },
                 highlights: [{ r: 1, c: 3, type: 'capture' }],
                 expectedMove: { from: { r: 2, c: 2 }, to: { r: 1, c: 3 } }
             }
         ],
-        sandbox: {
+               sandbox: {
             pieces: [
-                { piece: 'tiger', color: 'white', r: 5, c: 5, designatedForest: { r: 2, c: 2 } },
-                { piece: 'king', color: 'black', r: 0, c: 4 }
+                { piece: 'tiger', color: 'white', r: 0, c: 2, designatedForest: { r: 2, c: 2 } },
+                { piece: 'pawn',  color: 'black', r: 1, c: 3 },
+                { piece: 'king',  color: 'black', r: 7, c: 7 }
             ]
         },
         next: 'water'
@@ -567,45 +567,48 @@ const LESSONS = {
         steps: [
             {
                 title: 'Protected while standing on the Temple',
-                text: 'A piece on a Temple square is shielded from any single attacker — a lone rook, bishop, queen, or knight cannot take it. Look at the shield badge on the piece.',
+                text: 'A piece on a Temple square is shielded from any single attacker — a lone rook, bishop, queen, or knight cannot take it. Look at the shield badge on the piece sitting on the temple at d7.',
                 setup: [
-                    { piece: 'bishop', color: 'white', r: 2, c: 2 },
-                    { piece: 'rook', color: 'black', r: 6, c: 2 }
+                    { piece: 'bishop', color: 'white', r: 4, c: 1 },   // temple (6,3) = d7
+                    { piece: 'rook',  color: 'black', r: 7, c: 1 }    // single attacker from below
                 ],
-                source: { r: 2, c: 2 }
+                source: { r: 4, c: 1 }
             },
             {
                 title: 'Protection breaks under a double attack',
-                text: 'If TWO or more enemies can attack the same Temple piece, the protection fails. In the game engine the count is automatic — you just have to line up a second attacker.',
+                text: 'If TWO or more enemies can attack the same Temple piece on the same turn, the protection fails. The rook attacks vertically, the bishop attacks diagonally — two attackers, shield gone.',
                 setup: [
-                    { piece: 'knight', color: 'white', r: 3, c: 3 },
-                    { piece: 'rook', color: 'black', r: 6, c: 3 },
-                    { piece: 'bishop', color: 'black', r: 0, c: 6 }
+                    { piece: 'knight', color: 'white', r: 4, c: 1 },   // temple (6,3)
+                    { piece: 'rook',   color: 'black', r: 7, c: 1 },   // attacker #1 — vertical
+                    { piece: 'bishop', color: 'black', r: 1, c: 4 }    // attacker #2 — diagonal
                 ],
-                source: { r: 3, c: 3 },
-                highlights: []
+                source: { r: 4, c: 1 }
             },
             {
                 title: 'The King is banned from Temples',
-                text: 'Unlike every other piece, the King cannot take refuge in a Temple. Even though it looks safe, the King is not allowed to step onto a Temple square.',
+                text: 'Unlike every other piece, the King cannot take refuge in a Temple. Even though it looks safe, the King is not allowed to step onto a Temple square. The temple directly below the King is off-limits — notice the missing highlight.',
                 setup: [
-                    { piece: 'king', color: 'white', r: 4, c: 1 },
+                    { piece: 'king', color: 'white', r: 3, c: 1 },     // one square ABOVE the temple
                     { piece: 'rook', color: 'black', r: 0, c: 4 }
                 ],
-                source: { r: 4, c: 1 },
+                source: { r: 3, c: 1 },
                 highlights: [
-                    { r: 3, c: 1, type: 'move' },
-                    { r: 5, c: 1, type: 'move' },
+                    { r: 2, c: 0, type: 'move' },
+                    { r: 2, c: 1, type: 'move' },
+                    { r: 2, c: 2, type: 'move' },
+                    { r: 3, c: 0, type: 'move' },
+                    { r: 3, c: 2, type: 'move' },
                     { r: 4, c: 0, type: 'move' },
                     { r: 4, c: 2, type: 'move' }
+                    // (4,1) is deliberately omitted — that's the temple
                 ]
             }
         ],
         sandbox: {
             pieces: [
-                { piece: 'knight', color: 'white', r: 4, c: 1 },
-                { piece: 'rook', color: 'black', r: 4, c: 5 },
-                { piece: 'king', color: 'black', r: 0, c: 7 }
+                { piece: 'knight', color: 'white', r: 4, c: 1 },   // on temple d7
+                { piece: 'rook',   color: 'black', r: 4, c: 5 },
+                { piece: 'king',   color: 'black', r: 7, c: 7 }
             ]
         },
         next: 'castling'
